@@ -6,8 +6,10 @@ enum robotState {
   HELPME // Sensors picked up problem in robot, such as flooding, overheating, or e-stop
 };
 
+//declare dolphinState as a robotState data structure
 enum robotState dolphinState;
 
+//check that systems are okay; assign initial state accordingly
 void setup() {
   setupPins();
   if(!areSystemsOK()){
@@ -18,22 +20,22 @@ void setup() {
 }
 
 void loop() {
-  if(dolphinState == STANDBY){ // Can explicitly check here for go function, or use an interrupt from OCU Serial input!
-    // Don't know that serial communication can use interrupts. We also need to download the mission here.
-    if(downloadMissionSuccessful()){
+  if(dolphinState == STANDBY){ 
+    //attempt to download mission here with Serial
+    if(downloadMissionSuccessful()){ //when get one, start searching
       dolphinState = SEARCH;
     } // else keep waiting!
     return;
   }
 
   // SENSE
-  checkSystem();
+  checkSystem(); // When we do this, we might want to have global parameters that remember the readings.
+                 // Then, in our Think section, the functions just access those variables instead of reading anew from sensors.
   readPixyCam();
 
   // THINK: Figures out which state the robot should be in.
   if(!areSystemsOK()){
-    dolphinState = HELPME; // Might need to add something to the top of the loop to wait for input from OCU,
-                            // but might be fine to make user restart whole system.
+    dolphinState = HELPME; 
   }
   if(dolphinState == SEARCH){
     if(foundMissionBuoy()){
@@ -52,6 +54,8 @@ void loop() {
     } // Maybe need else statement to send to OCU a final victory report.
   }
 
+  // Send state, yaw, pitch1, pitch2 to ACT Arduino.
+
   // ACT: All we need to pass is the current state of the system to the ACT Arduino.
   switch(dolphinState){
     case SEARCH:
@@ -67,12 +71,14 @@ void loop() {
       blinkVictorySignal();
       break;
     case HELPME:
-      blinkDestressSignal();
+      softEstop();
+      blinkDistressSignal();
       break;
     default: // Probably some error checking code here, because it really shouldn't hit this statement!
       break;
   }
-  pinOCU(); // Input for the message should be decided from serial message (see Think: VICTORY comment).
+  pingOCU(); // Input for the message should be decided from serial message (see Think: VICTORY comment).
+            // Sinze XBee is on Sense-Think Arduino, pinOCU will happen on here instead of the ACT.
 }
 
 void areSystemsOK(){
