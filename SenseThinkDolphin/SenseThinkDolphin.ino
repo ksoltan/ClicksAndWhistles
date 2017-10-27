@@ -1,3 +1,13 @@
+//Clicks and Whistles sense/think Arduino code
+//Version 0
+
+#include <SPI.h>
+#include <Pixy.h>
+
+Pixy pixy; //This object handles the pixy cam
+bool canSeeBuoy = false;
+int buoyX = -1, buoyY = -1; //X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
+
 enum robotState {
   STANDBY, // Waiting for GO signal
   SEARCH, // Searching for next target
@@ -12,6 +22,8 @@ enum robotState dolphinState;
 //check that systems are okay; assign initial state accordingly
 void setup() {
   setupPins();
+  setupPixy();
+
   if(!areSystemsOK()){
     dolphinState = HELPME;
   }else{
@@ -61,6 +73,33 @@ void loop() {
   
 void areSystemsOK(){
   // Could break this up into separate check system functions and if one returns bad change state to helpme?
-  return !isFloodSensorOK || !isTempSensorOK() || !isBatteryVoltageOK() || !isCheckEStopOK();
+  return isFloodSensorOK && isTempSensorOK() && isBatteryVoltageOK() && isCheckEStopOK();
 }
 
+void setupPixy() {
+  pixy.init();
+}
+
+bool readPixyCam(int ) {
+  
+  int blockCount = pixy.getBlocks();
+
+  canSeeBuoy = (blockCount > 0);
+  
+  if (canSeeBuoy) {
+    int maxArea = 0, maxIndex;
+    for (int i = 0; i < blockCount; i++) {
+      area = pixy.blocks[i].width * pixy.blocks[i].height > maxArea
+      if (area > maxArea) {
+        maxArea = area;
+        maxIndex = i;
+      }
+    }
+
+    buoyX = pixy.blocks[maxIndex].x;
+    buoyY = pixy.blocks[maxIndex].y;
+  } else {
+    buoyX = -1;
+    buoyY = -1;
+  }
+}
