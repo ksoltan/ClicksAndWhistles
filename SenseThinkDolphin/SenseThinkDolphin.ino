@@ -16,6 +16,10 @@ Pixy pixy; //This object handles the pixy cam
 bool canSeeBuoy = false;
 int buoyX = -1, buoyY = -1; //X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
 
+long unsigned lastMoveTime = 0; //Keeps track of the last time we calculated tail positions. 0 indicates it's never been initialized.
+long unsigned moveTimer = 0; //Keeps track of the tail's phase. Always counts up, but speed can change.
+int tailPitch, tailYaw; //The position where the tail *should* be
+
 enum robotState {
   STANDBY, // Waiting for GO signal
   SEARCH, // Searching for next target
@@ -75,9 +79,10 @@ void loop() {
   }
 
   // Communicate with Act and computer
-  sendActParameters(); // Send state, yaw, pitch1, pitch2 to ACT Arduino.
+  findActParameters(); // Calculate tail positions
+  sendActParameters(); // Send state, yaw, pitch to ACT Arduino.
   pingOCU(); // Input for the message should be decided from serial message (see Think: VICTORY comment).
-            // Sinze XBee is on Sense-Think Arduino, pinOCU will happen on here instead of the ACT.
+            // Since XBee is on Sense-Think Arduino, pingOCU will happen on here instead of the ACT.
 
 }
 
@@ -123,7 +128,7 @@ bool readPixyCam(int ) {
  *  Relies on: battery pin variable
  *  Returns: is battery ok (based on average of last 10 values)
  */
-bool isBatteryVolatageOK(){
+bool isBatteryVolatageOK() {
   static int measurementArray[10] = {1024,1024,1024,1024,1024,1024,1024,1024,1024,1024};
   static int index = 0;
   int voltage = 0;
@@ -148,7 +153,7 @@ bool isBatteryVolatageOK(){
  *  Relies on: temperature pin variable
  *  Returns: is temperature OK (based on average of last 10 values)
  */
-bool isTempSensorOK(){
+bool isTempSensorOK() {
   static double measurementArray[10] = {0,0,0,0,0,0,0,0,0,0};
   static int index = 0;
   uint16_t val;
@@ -177,8 +182,46 @@ bool isTempSensorOK(){
  *  Relies on: floodPin variable
  *  Returns: has the flood sensor sensed water
  */
-bool isFloodSensorOK(){
+bool isFloodSensorOK() {
   return digitalRead(floodPin);
 }
 
+//This finds the angles for the tail servos. It depends on the robot's
+// state, the pixycam's info, and time.
+void findActParameters() {
 
+  //First, do some timing stuff.
+
+  //If lastMoveTime has not been initialized, initialize it. Note that this makes the current iteration return no motion, probably.
+  if (lastMoveTime == 0) lastMoveTime = millis();
+
+  switch (robotState){ //Mess with the timer
+    case SEARCH:
+    case APPROACH:
+      moveTimer += (millis() - lastMoveTime); //Increment the move timer at one unit per millisecond
+      break;
+    case VICTORY:
+      moveTimer += (millis() - lastMoveTime)/2; //Half speed in victory state
+    case STANDBY:
+    case HELPME:
+    default:
+      moveTimer += 0; //Don't move if we haven't started, or there's a problem
+      break;
+  } //End switch
+
+  tailPitch = (127.5 * sin(moveTimer/6000.0)) + 127.5; //Sine wave, period of six seconds. All math is floats but output is int from 0-256.
+
+  int tailYawGoal; //Where the tail "wants" to be. We don't want it moving too fast, though.
+
+  if (robotState == APPROACH && buoyX != -1)  //If we're going towards a buoy, and we can see it
+    tailYawGoal = (buoyX/319.0)*255.0; //Convert from (0-319) to (0-255)
+  else //Otherwise...
+    tailYawGoal = 127; //Center the tail
+    //Note that technically, the center of the range is 127.5. But this should be close enough.
+
+  //In order to yaw the tail slowly, we just move it a bit, based on the cycle time
+  if (tailYaw > tailYawGoal) tailYaw -= (millis() - lastMoveTime) / 4; //About 1 second to go thru the full yaw range
+  else if (tailYaw < tailYawGoal) tailYaw += (millis() - lastMoveTime) / 4;
+  else tailYaw += 0; //If it's where it should be, don't adjust it
+
+}
