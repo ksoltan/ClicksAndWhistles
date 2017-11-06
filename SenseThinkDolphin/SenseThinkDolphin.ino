@@ -9,8 +9,11 @@
 //Set up pins and outputs
 int ledPin = 8;
 int tempPin = A0;
-int floodPin = 5; //Actually a digital sensor
+int floodPin = 5;
 int batteryPin = A2;
+
+bool hasMission = false; //The mission comes from the computer
+String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
 
 Pixy pixy; //This object handles the pixy cam
 bool canSeeBuoy = false;
@@ -45,11 +48,11 @@ void setup() {
 
 void loop() {
   if(dolphinState == STANDBY){ 
-    //attempt to download mission here with Serial
-    if(downloadMissionSuccessful()){ //when get one, start searching
+    downloadMission();//attempt to download mission here with Serial
+    if(hasMission){ //when get one, start searching
       dolphinState = SEARCH;
     } // else keep waiting!
-    return;
+    else return;
   }
 
   // SENSE
@@ -95,11 +98,18 @@ bool areSystemsOK(){
   return isFloodSensorOK && isTempSensorOK() && isBatteryVoltageOK() && isCheckEStopOK();
 }
 
+void setupPins(){
+  pinMode(ledPin, OUTPUT);
+  pinMode(tempPin, INPUT);
+  pinMode(floodPin, INPUT); 
+  pinMode(batteryPin, INPUT);
+}
+
 void setupPixy() {
   pixy.init();
 }
 
-bool readPixyCam(int ) {
+bool readPixyCam() {
   
   int blockCount = pixy.getBlocks();
 
@@ -108,7 +118,7 @@ bool readPixyCam(int ) {
   if (canSeeBuoy) {
     int maxArea = 0, maxIndex;
     for (int i = 0; i < blockCount; i++) {
-      area = pixy.blocks[i].width * pixy.blocks[i].height > maxArea
+      int area = pixy.blocks[i].width * pixy.blocks[i].height;
       if (area > maxArea) {
         maxArea = area;
         maxIndex = i;
@@ -117,11 +127,17 @@ bool readPixyCam(int ) {
 
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
+
+    Serial.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
   } else {
+    Serial.println("No buoy found.");
     buoyX = -1;
     buoyY = -1;
   }
+  
 }
+
+
 
 /*
  * Function: isBatteryVoltageOK 
@@ -169,12 +185,10 @@ bool isTempSensorOK() {
     temp += measurementArray[i]; //sum up voltages
   }
   temp = temp/10; //divide by number of samples
-  if (temp < 60){ //60 degrees C is a lot.
-    return True
-  }
-  else {
-    return False
-  }
+  
+  if (temp < 60) return(true); //60 degrees C is a lot.
+  else return(false);
+
 }
 
 /*
@@ -202,6 +216,7 @@ void findActParameters() {
       break;
     case VICTORY:
       moveTimer += (millis() - lastMoveTime)/2; //Half speed in victory state
+      break;
     case STANDBY:
     case HELPME:
     default:
@@ -214,7 +229,7 @@ void findActParameters() {
   int tailYawGoal; //Where the tail "wants" to be. We don't want it moving too fast, though.
 
   if (robotState == APPROACH && buoyX != -1)  //If we're going towards a buoy, and we can see it
-    tailYawGoal = (buoyX/319.0)*255.0; //Convert from (0-319) to (0-255)
+    tailYawGoal = (buoyX/319.0)*255.0; //Convert from (0-319) to (0-255)sssssssss
   else //Otherwise...
     tailYawGoal = 127; //Center the tail
     //Note that technically, the center of the range is 127.5. But this should be close enough.
@@ -223,5 +238,29 @@ void findActParameters() {
   if (tailYaw > tailYawGoal) tailYaw -= (millis() - lastMoveTime) / 4; //About 1 second to go thru the full yaw range
   else if (tailYaw < tailYawGoal) tailYaw += (millis() - lastMoveTime) / 4;
   else tailYaw += 0; //If it's where it should be, don't adjust it
+
+}
+
+
+void downloadMission() {
+
+  hasMission = false;
+
+  if (!Serial.available()) return;
+
+  mission = Serial.readStringUntil('\n'); //Read until a newline
+
+  if (mission.length == 0 || mission[mission.length-1] != e) {
+    Serial.println("Got invalid mission string.");
+    return;
+
+  for (int i = 0; i < mission.length-1; i++) {
+    if (mission[i] != 'r' && mission[i] != 'y' && mission[i] != 'w') {
+      Serial.println("Got invalid mission string.");
+      return;
+    } 
+  }
+
+  hasMission = true;
 
 }
