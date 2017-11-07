@@ -1,3 +1,8 @@
+
+static int ledPin = 0; //What pin is this actually?
+
+
+
 enum robotState {
   STANDBY, // Waiting for GO signal
   SEARCH, // Searching for next target
@@ -43,6 +48,8 @@ void loop() {
 
 void setupActPins(){
   
+  pinMode(ledPin, OUTPUT);
+
 }
 
 void receiveActParameters(){
@@ -50,5 +57,26 @@ void receiveActParameters(){
   // Update state, yaw, pitch1, pitch2 global variables.
 }
 
+void blinkSearchSignal(){
 
+  digitalWrite(ledPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
 
+}
+
+void blinkApproachSignal(){
+
+  digitalWrite(ledPin, millis() % 350 > 250 ? HIGH : LOW); //Blink every 350ms, asymmetrically
+
+}
+
+void blinkVictorySignal(){
+
+  digitalWrite(ledPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
+
+}
+
+void blinkDistressSignal(){
+
+  digitalWrite(ledPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
+
+}
