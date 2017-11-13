@@ -7,21 +7,21 @@
 /* Set up Global variables */
 
 //Set up pins and outputs
-int ledPin = 8;
 int tempPin = A0;
 int floodPin = 5;
-int batteryPin = A2;
+int batteryPin = A2; // ??Shouldn't there be two battery pins??
 
-bool hasMission = false; //The mission comes from the computer
+bool hasMission = false; // The mission comes from the computer
 String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
+int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
 
-Pixy pixy; //This object handles the pixy cam
+Pixy pixy; // This object handles the pixy cam
 bool canSeeBuoy = false;
-int buoyX = -1, buoyY = -1; //X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
+int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
 
-long unsigned lastMoveTime = 0; //Keeps track of the last time we calculated tail positions. 0 indicates it's never been initialized.
-long unsigned moveTimer = 0; //Keeps track of the tail's phase. Always counts up, but speed can change.
-int tailPitch, tailYaw; //The position where the tail *should* be
+long unsigned lastMoveTime = 0; // Keeps track of the last time we calculated tail positions. 0 indicates it's never been initialized.
+long unsigned moveTimer = 0; // Keeps track of the tail's phase. Always counts up, but speed can change.
+int tailPitch, tailYaw; // The position where the tail *should* be
 
 enum robotState {
   STANDBY, // Waiting for GO signal
@@ -31,10 +31,10 @@ enum robotState {
   HELPME // Sensors picked up problem in robot, such as flooding, overheating, or e-stop
 };
 
-//declare dolphinState as a robotState data structure
+// declare dolphinState as a robotState data structure
 enum robotState dolphinState;
 
-//check that systems are okay; assign initial state accordingly
+// check that systems are okay; assign initial state accordingly
 void setup() {
   setupPins();
   setupPixy();
@@ -47,12 +47,12 @@ void setup() {
 }
 
 void loop() {
-  if(dolphinState == STANDBY){ 
+  if(dolphinState == STANDBY){
     downloadMission();//attempt to download mission here with Serial
-    if(hasMission){ //when get one, start searching
+    if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
-    } // else keep waiting!
-    else return;
+    }
+    else return; // Otherwise keep waiting for mission, remain in STANDBY mode
   }
 
   // SENSE
@@ -95,11 +95,10 @@ void loop() {
  */
 bool areSystemsOK(){
   // Could break this up into separate check system functions and if one returns bad change state to helpme?
-  return isFloodSensorOK && isTempSensorOK() && isBatteryVoltageOK() && isCheckEStopOK();
+  return isFloodSensorOK() && isTempSensorOK() && isBatteryVoltageOK() && isCheckEStopOK();
 }
 
 void setupPins(){
-  pinMode(ledPin, OUTPUT);
   pinMode(tempPin, INPUT);
   pinMode(floodPin, INPUT); 
   pinMode(batteryPin, INPUT);
@@ -110,7 +109,6 @@ void setupPixy() {
 }
 
 bool readPixyCam() {
-  
   int blockCount = pixy.getBlocks();
 
   canSeeBuoy = (blockCount > 0);
@@ -134,10 +132,8 @@ bool readPixyCam() {
     buoyX = -1;
     buoyY = -1;
   }
-  
+  return canSeeBuoy;
 }
-
-
 
 /*
  * Function: isBatteryVoltageOK 
@@ -155,13 +151,12 @@ bool isBatteryVolatageOK() {
   for (int i=0; i<10; i++){
     voltage += measurementArray[i]; //sum up voltages
   }
-  voltage = voltage/10; //divide by number of samples
-  if (voltage > 776){ //5 volts = 1024. We want more than 3.8 from voltage divider
-    return True
-  }
-  else {
-    return False
-  }
+  voltage = voltage / 10; //divide by number of samples
+
+  float min_acceptable_voltage = 3.8;
+  int min_acceptable_reading = (int) (min_acceptable_voltage * 1024 / 5);  // 5 volts = 1024. We want more than 3.8 from voltage divider
+  
+  return voltage > min_acceptable_reading;
 }
 
 /*
@@ -176,28 +171,26 @@ bool isTempSensorOK() {
   double dat;
   double temp = 0;
   
-  val=analogRead(A0);//Connect LM35 on Analog 0
-  dat = (double) val * (5/10.24); //temp in celcius
-  measurementArray[index] = dat;//replace oldest temp sample
-  index={index+1}%10; //make sure index is within size of the array
+  val = analogRead(tempPin); // Read temperature sensor LM35
+  dat = (double) val * (5 / 10.24); // temperature in celsius ??WHERE DID WE GET THIS FROM??
+  measurementArray[index] = dat; // replace oldest temp sample
+  index = {index+1} % 10; //make sure index is within size of the array
   
-  for (int i=0; i<10; i++){
+  for (int i = 0; i < 10; i++){
     temp += measurementArray[i]; //sum up voltages
   }
-  temp = temp/10; //divide by number of samples
-  
-  if (temp < 60) return(true); //60 degrees C is a lot.
-  else return(false);
+  temp = temp / 10; //divide by number of samples to get average temperature
 
+  return temp < 60; // 60 degrees C is a lot and therefore should not be okay above this.
 }
 
 /*
  * Function: isBatteryVoltageOK 
  *  Relies on: floodPin variable
- *  Returns: has the flood sensor sensed water
+ *  Returns: has the flood sensor detected water
  */
 bool isFloodSensorOK() {
-  return digitalRead(floodPin);
+  return digitalRead(floodPin); // ??IS THIS JUST A DIGITAL READ??
 }
 
 //This finds the angles for the tail servos. It depends on the robot's
@@ -222,45 +215,49 @@ void findActParameters() {
     default:
       moveTimer += 0; //Don't move if we haven't started, or there's a problem
       break;
-  } //End switch
+  }
 
   tailPitch = (127.5 * sin(moveTimer/6000.0)) + 127.5; //Sine wave, period of six seconds. All math is floats but output is int from 0-256.
 
   int tailYawGoal; //Where the tail "wants" to be. We don't want it moving too fast, though.
 
-  if (robotState == APPROACH && buoyX != -1)  //If we're going towards a buoy, and we can see it
+  if (robotState == APPROACH && buoyX != -1){  //If we're going towards a buoy, and we can see it
     tailYawGoal = (buoyX/319.0)*255.0; //Convert from (0-319) to (0-255)sssssssss
-  else //Otherwise...
+  }
+  else{
     tailYawGoal = 127; //Center the tail
+  }
     //Note that technically, the center of the range is 127.5. But this should be close enough.
 
   //In order to yaw the tail slowly, we just move it a bit, based on the cycle time
-  if (tailYaw > tailYawGoal) tailYaw -= (millis() - lastMoveTime) / 4; //About 1 second to go thru the full yaw range
-  else if (tailYaw < tailYawGoal) tailYaw += (millis() - lastMoveTime) / 4;
-  else tailYaw += 0; //If it's where it should be, don't adjust it
-
+  if (tailYaw > tailYawGoal){
+    tailYaw -= (millis() - lastMoveTime) / 4; //About 1 second to go thru the full yaw range
+  }
+  else if (tailYaw < tailYawGoal){
+    tailYaw += (millis() - lastMoveTime) / 4;
+  }
+  else{
+    tailYaw += 0; //If it's where it should be, don't adjust it
+  }
 }
 
-
 void downloadMission() {
-
   hasMission = false;
 
-  if (!Serial.available()) return;
+  if (!Serial.available()) return; // No serial connection established to download mission
 
-  mission = Serial.readStringUntil('\n'); //Read until a newline
+  mission = Serial.readStringUntil('\n'); // Read until a newline
 
-  if (mission.length == 0 || mission[mission.length-1] != e) {
+  if (mission.length() == 0 || mission[mission.length()-1] != e) { // ??CHECK THAT .length() DOES WHAT YOU'RE EXPECTING IT TO DO ie num characters
     Serial.println("Got invalid mission string.");
     return;
-
-  for (int i = 0; i < mission.length-1; i++) {
+  }
+  for (int i = 0; i < mission.length()-1; i++) {
     if (mission[i] != 'r' && mission[i] != 'y' && mission[i] != 'w') {
       Serial.println("Got invalid mission string.");
       return;
-    } 
+    }
   }
 
   hasMission = true;
-
 }

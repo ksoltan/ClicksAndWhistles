@@ -1,5 +1,5 @@
 #include <Wire.h>
-static int ledPin = 0; //What pin is this actually?
+static int ledPin = 8; //What pin is this actually?
 int x = 0;
 char message[10];
 char servo[2];
@@ -28,7 +28,6 @@ void loop() {
 }
 
 void setupActPins(){
-  
   pinMode(ledPin, OUTPUT);
 
 }
