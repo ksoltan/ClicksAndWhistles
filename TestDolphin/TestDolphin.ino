@@ -81,7 +81,9 @@ void loop() {
       dolphinState = APPROACH;
       printDolphinState();
     }
-  } else if(dolphinState == APPROACH){
+  }
+  
+  else if(dolphinState == APPROACH){
     if(missionBuoyIsClose){
       dolphinState = VICTORY; // Use this state to update mission.
       printDolphinState();
@@ -89,7 +91,9 @@ void loop() {
       dolphinState = SEARCH;
       printDolphinState();
     } // Maybe need an else statement to get the coordinates of next movement
-  } else if(dolphinState == VICTORY){
+  }
+  
+  else if(dolphinState == VICTORY){
     incrementMissionTarget();
     
     if(current_mission_step < lengthMission){
@@ -102,7 +106,7 @@ void loop() {
 
 void incrementMissionTarget(){
   if(current_mission_step >= lengthMission){
-    return;
+    return; // Do not increment mission if the end of it is reached
   }
   current_mission_step++;
 }
@@ -135,7 +139,6 @@ void printDolphinState(){
  *  Returns: True if all system checks read as OK
  */
 bool areSystemsOK(){
-  // Could break this up into separate check system functions and if one returns bad change state to helpme?
   return isFloodSensorOK() && isTempSensorOK() && isBatteryVoltageOK() && isEStopOK();
 }
 
@@ -231,22 +234,18 @@ bool isBatteryVoltageOK() {
  */
 bool isTempSensorOK() {
   #ifdef tempPin
-    static double measurementArray[10] = {0,0,0,0,0,0,0,0,0,0};
-    static int index = 0;
-    uint16_t val;
-    double dat;
-    double temp = 0;
-    
-    val = analogRead(tempPin); // Read temperature sensor LM35
-    dat = (double) val * (5 / 10.24); // temperature in celsius ??WHERE DID WE GET THIS FROM??
-    measurementArray[index] = dat; // replace oldest temp sample
-    index = (index+1) % 10; //make sure index is within size of the array
-    
-    for (int i = 0; i < 10; i++){
-      temp += measurementArray[i]; //sum up voltages
+    total_temp = 0;
+    num_readings = 10;
+    // Read temperature sensor "num_readings" times and average temperature readings
+    for(int i = 0; i < num_readings; i++){
+      val = analogRead(tempPin); // Read temperature sensor LM35
+      total_temp += val;
     }
-    temp = temp / 10; //divide by number of samples to get average temperature
-  
+    // Get average temperature reading
+    double avg_temp = total_temp / num_readings;
+    // Convert to Celsius, from https://www.allaboutcircuits.com/projects/monitor-temperature-with-an-arduino/
+    double avg_temp_C = avg_temp * (5 / 10.24);
+    
     return temp < 60; // 60 degrees C is a lot and therefore should not be okay above this.
    
    #else
@@ -262,7 +261,7 @@ bool isTempSensorOK() {
  */
 bool isFloodSensorOK() {
   #ifdef floodPin
-    return digitalRead(floodPin); // ??IS THIS JUST A DIGITAL READ??  
+    return digitalRead(floodPin); // ??IS THIS JUST A DIGITAL READ??
   #else
     return true; // No flood sensor to check
   #endif
@@ -271,7 +270,7 @@ bool isFloodSensorOK() {
 
 void downloadMission() {
   #ifdef XBEE_INPUT
-    
+    // DO SOMETHING
   #else
     hasMission = false;
     if (Serial.available()){ // Serial port available for communication
