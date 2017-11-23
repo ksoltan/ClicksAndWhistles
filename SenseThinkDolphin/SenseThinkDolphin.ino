@@ -7,17 +7,24 @@
 /* Set up Global variables */
 
 //Set up pins and outputs
-int tempPin = A0;
-int floodPin = 5;
-int batteryPin = A2; // ??Shouldn't there be two battery pins??
+//#define XBEE_INPUT // Will use the XBEE for user input
 
+//#define tempPin A0
+//#define floodPin 5
+//#define batteryPin A2 // ??Shouldn't there be two battery pins??
+
+// Mission definition variables
 bool hasMission = false; // The mission comes from the computer
 String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
+int lengthMission = 0;
 int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
 
+// Pixycam vision variables
 Pixy pixy; // This object handles the pixy cam
-bool canSeeBuoy = false;
+bool canSeeMissionBuoy = false;
 int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
+int CLOSE_BUOY_AREA = 3000; // Change to tune how close robot comes to buoy before turning
+bool missionBuoyIsClose = false; // Set depending on the size of the buoy the pixyCam sees
 
 long unsigned lastMoveTime = 0; // Keeps track of the last time we calculated tail positions. 0 indicates it's never been initialized.
 long unsigned moveTimer = 0; // Keeps track of the tail's phase. Always counts up, but speed can change.
@@ -39,11 +46,13 @@ void setup() {
   setupPins();
   setupPixy();
 
+  Serial.begin(9600); // Start for serial communication
   if(!areSystemsOK()){
     dolphinState = HELPME;
   }else{
     dolphinState = STANDBY;
   }
+  printDolphinState();
 }
 
 void loop() {
@@ -51,44 +60,78 @@ void loop() {
     downloadMission();//attempt to download mission here with Serial
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
+      printDolphinState();
+      Serial.print("Mission recieved: ");
+      Serial.print(mission);
+      Serial.println();
     }
     else return; // Otherwise keep waiting for mission, remain in STANDBY mode
   }
 
-  // SENSE
-  checkSystem(); // When we do this, we might want to have global parameters that remember the readings.
-                 // Then, in our Think section, the functions just access those variables instead of reading anew from sensors.
   readPixyCam();
 
   // THINK: Figures out which state the robot should be in.
   if(!areSystemsOK()){
     dolphinState = HELPME; 
+    printDolphinState();
   }
+  
   if(dolphinState == SEARCH){
-    if(foundMissionBuoy()){
+    if(canSeeMissionBuoy){
       dolphinState = APPROACH;
+      printDolphinState();
     }
   }
+  
   else if(dolphinState == APPROACH){
-    if(isTooCloseToMissionBuoy()){
+    if(missionBuoyIsClose){
       dolphinState = VICTORY; // Use this state to update mission.
-    } else if(lostMissionBuoy()){
+      printDolphinState();
+    } else if(!canSeeMissionBuoy){
       dolphinState = SEARCH;
+      printDolphinState();
     } // Maybe need an else statement to get the coordinates of next movement
   }
+  
   else if(dolphinState == VICTORY){
-    if(!finishedMission()){
-      incrementMissionTarget();
+    incrementMissionTarget();
+    
+    if(current_mission_step < lengthMission){
       dolphinState = SEARCH;
+      Serial.println(current_mission_step);
+      printDolphinState();
     } // Maybe need else statement to send to OCU a final victory report.
   }
+}
 
-  // Communicate with Act and computer
-  findActParameters(); // Calculate tail positions
-  sendActParameters(); // Send state, yaw, pitch to ACT Arduino.
-  pingOCU(); // Input for the message should be decided from serial message (see Think: VICTORY comment).
-            // Since XBee is on Sense-Think Arduino, pingOCU will happen on here instead of the ACT.
+void incrementMissionTarget(){
+  if(current_mission_step >= lengthMission){
+    return; // Do not increment mission if the end of it is reached
+  }
+  current_mission_step++;
+}
 
+void printDolphinState(){
+  switch(dolphinState){
+    case STANDBY:
+      Serial.println("STANDBY");
+      break;
+    case SEARCH:
+      Serial.println("SEARCH");
+      break;
+    case APPROACH:
+      Serial.println("APPROACH");
+      break;
+    case VICTORY:
+      Serial.println("VICTORY");
+      break;
+    case HELPME:
+      Serial.println("HELME");
+      break;
+    default:
+      Serial.println("DODO");
+      break;
+  }
 }
 
 /*
@@ -96,14 +139,13 @@ void loop() {
  *  Returns: True if all system checks read as OK
  */
 bool areSystemsOK(){
-  // Could break this up into separate check system functions and if one returns bad change state to helpme?
-  return isFloodSensorOK() && isTempSensorOK() && isBatteryVoltageOK() && isCheckEStopOK();
+  return isFloodSensorOK() && isTempSensorOK() && isBatteryVoltageOK() && isEStopOK();
 }
 
 void setupPins(){
-  pinMode(tempPin, INPUT);
-  pinMode(floodPin, INPUT); 
-  pinMode(batteryPin, INPUT);
+//  pinMode(tempPin, INPUT);
+//  pinMode(floodPin, INPUT); 
+//  pinMode(batteryPin, INPUT);
 }
 
 void setupPixy() {
@@ -111,54 +153,79 @@ void setupPixy() {
 }
 
 bool readPixyCam() {
-  int blockCount = pixy.getBlocks();
-
-  canSeeBuoy = (blockCount > 0);
+  int blockCount = pixy.getBlocks(); // Number of blocks detected
+  missionBuoyIsClose = false;
+  canSeeMissionBuoy = (blockCount > 0);
   
-  if (canSeeBuoy) {
-    int maxArea = 0, maxIndex;
+  int maxIndex = -1; // Define as -1 in case no detected blocks have the correct color
+  int maxArea = 0;
+  if (canSeeMissionBuoy) { // If there are potential buoys
     for (int i = 0; i < blockCount; i++) {
-      int area = pixy.blocks[i].width * pixy.blocks[i].height;
-      if (area > maxArea) {
-        maxArea = area;
-        maxIndex = i;
+      // Only check blocks that are of the color that is being searched for
+      if(pixy.blocks[i].signature == getCharPixyColor(mission[current_mission_step])){
+        // Choose the block with the largest area to be the supposed buoy
+        int area = pixy.blocks[i].width * pixy.blocks[i].height;
+        if (area > maxArea) {
+          maxArea = area;
+          maxIndex = i;
+        }
       }
     }
-
+  }
+  
+  if(maxIndex > -1){ // There are detected blocks of the correct blocks
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
-
-    Serial.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
-  } else {
-    Serial.println("No buoy found.");
+    // Decide if the buoy is close based on the size of the area that the pixycam sees.
+    missionBuoyIsClose = (maxArea > CLOSE_BUOY_AREA) ? true : false;
+//    Serial.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
+    if(missionBuoyIsClose){
+      Serial.println("Mission buoy is close");  
+    }
+    
+  }
+  else {
+//    Serial.println("No buoy found.");
+    canSeeMissionBuoy = false;
     buoyX = -1;
     buoyY = -1;
   }
-  return canSeeBuoy;
+  
+  return canSeeMissionBuoy;
 }
+
 
 /*
  * Function: isBatteryVoltageOK 
  *  Relies on: battery pin variable
  *  Returns: is battery ok (based on average of last 10 values)
  */
-bool isBatteryVolatageOK() {
-  static int measurementArray[10] = {1024,1024,1024,1024,1024,1024,1024,1024,1024,1024};
-  static int index = 0;
-  int voltage = 0;
+bool isEStopOK(){
+  return true; // NO ESTOP DEFINED YET MUST CHANGE
+}
 
-  measurementArray[index] = analogRead(batteryPin); //replace oldest voltage sample
-  index = (index+1)%10; //make sure index is within size of the array
-
-  for (int i=0; i<10; i++){
-    voltage += measurementArray[i]; //sum up voltages
-  }
-  voltage = voltage / 10; //divide by number of samples
-
-  float min_acceptable_voltage = 3.8;
-  int min_acceptable_reading = (int) (min_acceptable_voltage * 1024 / 5);  // 5 volts = 1024. We want more than 3.8 from voltage divider
+bool isBatteryVoltageOK() {
+  #ifdef batteryPin
+    static int measurementArray[10] = {1024,1024,1024,1024,1024,1024,1024,1024,1024,1024};
+    static int index = 0;
+    int voltage = 0;
   
-  return voltage > min_acceptable_reading;
+    measurementArray[index] = analogRead(batteryPin); //replace oldest voltage sample
+    index = (index+1)%10; //make sure index is within size of the array
+  
+    for (int i=0; i<10; i++){
+      voltage += measurementArray[i]; //sum up voltages
+    }
+    voltage = voltage / 10; //divide by number of samples
+  
+    float min_acceptable_voltage = 3.8;
+    int min_acceptable_reading = (int) (min_acceptable_voltage * 1024 / 5);  // 5 volts = 1024. We want more than 3.8 from voltage divider
+    
+    return voltage > min_acceptable_reading;
+  #else
+    return true;
+  
+  #endif
 }
 
 /*
@@ -167,23 +234,25 @@ bool isBatteryVolatageOK() {
  *  Returns: is temperature OK (based on average of last 10 values)
  */
 bool isTempSensorOK() {
-  static double measurementArray[10] = {0,0,0,0,0,0,0,0,0,0};
-  static int index = 0;
-  uint16_t val;
-  double dat;
-  double temp = 0;
-  
-  val = analogRead(tempPin); // Read temperature sensor LM35
-  dat = (double) val * (5 / 10.24); // temperature in celsius ??WHERE DID WE GET THIS FROM??
-  measurementArray[index] = dat; // replace oldest temp sample
-  index = {index+1} % 10; //make sure index is within size of the array
-  
-  for (int i = 0; i < 10; i++){
-    temp += measurementArray[i]; //sum up voltages
-  }
-  temp = temp / 10; //divide by number of samples to get average temperature
-
-  return temp < 60; // 60 degrees C is a lot and therefore should not be okay above this.
+  #ifdef tempPin
+    total_temp = 0;
+    num_readings = 10;
+    // Read temperature sensor "num_readings" times and average temperature readings
+    for(int i = 0; i < num_readings; i++){
+      val = analogRead(tempPin); // Read temperature sensor LM35
+      total_temp += val;
+    }
+    // Get average temperature reading
+    double avg_temp = total_temp / num_readings;
+    // Convert to Celsius, from https://www.allaboutcircuits.com/projects/monitor-temperature-with-an-arduino/
+    double avg_temp_C = avg_temp * (5 / 10.24);
+    
+    return temp < 60; // 60 degrees C is a lot and therefore should not be okay above this.
+   
+   #else
+    return true;
+   
+   #endif
 }
 
 /*
@@ -192,74 +261,50 @@ bool isTempSensorOK() {
  *  Returns: has the flood sensor detected water
  */
 bool isFloodSensorOK() {
-  return digitalRead(floodPin); // ??IS THIS JUST A DIGITAL READ??
-}
-
-//This finds the angles for the tail servos. It depends on the robot's
-// state, the pixycam's info, and time.
-void findActParameters() {
-
-  //First, do some timing stuff.
-
-  //If lastMoveTime has not been initialized, initialize it. Note that this makes the current iteration return no motion, probably.
-  if (lastMoveTime == 0) lastMoveTime = millis();
-
-  switch (robotState){ //Mess with the timer
-    case SEARCH:
-    case APPROACH:
-      moveTimer += (millis() - lastMoveTime); //Increment the move timer at one unit per millisecond
-      break;
-    case VICTORY:
-      moveTimer += (millis() - lastMoveTime)/2; //Half speed in victory state
-      break;
-    case STANDBY:
-    case HELPME:
-    default:
-      moveTimer += 0; //Don't move if we haven't started, or there's a problem
-      break;
-  }
-
-  tailPitch = (127.5 * sin(moveTimer/6000.0)) + 127.5; //Sine wave, period of six seconds. All math is floats but output is int from 0-256.
-
-  int tailYawGoal; //Where the tail "wants" to be. We don't want it moving too fast, though.
-
-  if (robotState == APPROACH && buoyX != -1){  //If we're going towards a buoy, and we can see it
-    tailYawGoal = (buoyX/319.0)*255.0; //Convert from (0-319) to (0-255)sssssssss
-  }
-  else{
-    tailYawGoal = 127; //Center the tail
-  }
-    //Note that technically, the center of the range is 127.5. But this should be close enough.
-
-  //In order to yaw the tail slowly, we just move it a bit, based on the cycle time
-  if (tailYaw > tailYawGoal){
-    tailYaw -= (millis() - lastMoveTime) / 4; //About 1 second to go thru the full yaw range
-  }
-  else if (tailYaw < tailYawGoal){
-    tailYaw += (millis() - lastMoveTime) / 4;
-  }
-  else{
-    tailYaw += 0; //If it's where it should be, don't adjust it
-  }
+  #ifdef floodPin
+    return digitalRead(floodPin); // ??IS THIS JUST A DIGITAL READ??
+  #else
+    return true; // No flood sensor to check
+  #endif
+  
 }
 
 void downloadMission() {
-  hasMission = false;
+  #ifdef XBEE_INPUT
+    // DO SOMETHING
+  #else
+    hasMission = false;
+    if (Serial.available()){ // Serial port available for communication
+      mission = Serial.readStringUntil('\n'); // Read until a newline
+      lengthMission = mission.length();
 
-  if (!Serial.available()) return; // No serial connection established to download mission
-
-  mission = Serial.readStringUntil('\n'); // Read until a newline
-
-  if (mission.length() == 0 || mission[mission.length()-1] != e) { // ??CHECK THAT .length() DOES WHAT YOU'RE EXPECTING IT TO DO ie num characters
-    Serial.println("Got invalid mission string.");
-    return;
-  }
-  for (int i = 0; i < mission.length()-1; i++) {
-    if (mission[i] != 'r' && mission[i] != 'y' && mission[i] != 'w') {
-      Serial.println("Got invalid mission string.");
-      return;
+      if (lengthMission == 0) {
+        Serial.println("Got invalid mission string.");
+        return;
+      }
+      for (int i = 0; i < lengthMission; i++) {
+        char char_i = mission[i];
+        if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
+          Serial.println("Got invalid mission string.");
+          return;
+        }
+      }
+      hasMission = true;
     }
-  }
-
-  hasMission = true;
+  #endif
+  
 }
+
+int getCharPixyColor(char c){
+  switch(c){
+    case 'r':
+      return 1; // Pixy trained on red as signature 1
+    case 'y':
+      return 2; // Pixy trained on yellow as signature 2
+    case 'w':
+      return 3; // Pixy trained on white as signature 3
+    default:
+      return -1; // This color doesn't exist
+  }
+}
+

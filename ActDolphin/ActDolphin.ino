@@ -2,15 +2,19 @@
 #include <Servo.h>
 #define ledPin 13 // ?? WE HAVE THREE LEDS ??
 #define eStopPin 8
+#define ACT_ADDRESS 8
 
 // Servos need PWM pins
-#define bodyServoPin 9
+#define yawServoPin 9
 #define tailServoPin 10
 
 int x = 0;
 String message;
 char servo;
 int servoPos;
+
+Servo yawServo;
+Servo tailServo;
 
 int yawServoPos; //tail servo
 int tailServoPos; //body servo
@@ -28,20 +32,20 @@ enum robotState dolphinState;
 //check that systems are okay; assign initial state accordingly
 void setup() {
   setupActPins();
+//  setupServos();
 
-  // Start the I2C Bus as Slave on address 9
-  Wire.begin(9);
+  // Start the I2C Bus as Slave on address 8
+  Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
-  Wire.onReceive(receiveEvent);
+  Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
   Serial.begin(9600); //Enable the serial comunication
 }
 
 void loop() {
-  // Receive instructions from Sense/Think Arduino
-//  receiveActParameters(); // Receive state, yaw, pitch1, pitch2 from SENSE/THINK Arduino.
   switch(dolphinState){
     case STANDBY:
-//      freezeAllMotors();
+      freezeAllMotors();
+      blinkStandbySignal();
       break;
       
     case SEARCH:
@@ -57,7 +61,7 @@ void loop() {
       break;
       
     case HELPME:
-      blinkDistressSignal();
+      blinkHelpmeSignal();
       pushEStop(); // Turn off servos
       break;
       
@@ -65,8 +69,8 @@ void loop() {
       break;
   }
   
+  analogWrite(yawServoPin, yawServoPos);
   analogWrite(tailServoPin, tailServoPos);
-  analogWrite(bodyServoPin, bodyServoPos);
 }
 
 void setupActPins(){
@@ -74,32 +78,68 @@ void setupActPins(){
   pinMode(eStopPin, OUTPUT);
 }
 
+void setupServos(){
+  yawServo.attach(yawServoPin);
+  tailServo.attach(tailServoPin);
+}
+
 void freezeAllMotors(){
-  
+  yawServo.write(90);
+  tailServo.write(90);
 }
 
 void pushEStop(){
   digitalWrite(eStopPin, LOW); // No current should be going to the Relay
 }
 
-void receiveEvent(int bytes) {
-  if (Wire.available() == 4){ // check if full message is recieved
-    for (int i=0; i<5; i++){
-      char c = Wire.read();
-      message[i] = c;
-    }
-    servo = message[0];
-    servopos = int(message.substring(1));
-    message = "";
-    if (servo == "t") {
-      tailServoPos = servopos;
-    }
-    else {
-      yawServoPos = servopos;
+void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
+  if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
+    dolphinState = Wire.read(); // Read the state
+    printDolphinState();
+
+    // Next is a comma.
+    Wire.read();
+
+    yawServoPos = Wire.read(); // Read the way position
+
+    // Next is a comma.
+    Wire.read();
+
+    tailServoPos = Wire.read(); // Read the tail position as a byte
+
+    // Check that the last character is semicolon
+    if(Wire.read() != ';'){
+      Serial.println("INCORRECTLY RECEIVED");
     }
   }
 }
 
+void printDolphinState(){
+  switch(dolphinState){
+    case STANDBY:
+      Serial.println("STANDBY");
+      break;
+    case SEARCH:
+      Serial.println("SEARCH");
+      break;
+    case APPROACH:
+      Serial.println("APPROACH");
+      break;
+    case VICTORY:
+      Serial.println("VICTORY");
+      break;
+    case HELPME:
+      Serial.println("HELME");
+      break;
+    default:
+      Serial.println("404");
+      break;
+  }
+}
+
+void blinkStandbySignal(){
+  digitalWrite(ledPin, HIGH);
+}
 void blinkSearchSignal(){
   digitalWrite(ledPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
 }
@@ -112,6 +152,6 @@ void blinkVictorySignal(){
   digitalWrite(ledPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
 }
 
-void blinkDistressSignal(){
+void blinkHelpmeSignal(){
   digitalWrite(ledPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
 }

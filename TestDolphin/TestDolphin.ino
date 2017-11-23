@@ -1,14 +1,15 @@
-//Clicks and Whistles sense/think Arduino code
-//Version 0
+// Clicks and Whistles sense/think Arduino testing code.
+// Author: Katya
 
 #include <SPI.h>
 #include <Pixy.h>
+#include <Wire.h>
 
 /* Set up Global variables */
+//#define XBEE_INPUT // Will use the XBEE for user input
+#define ACT_ADDRESS 8 // Address at which ACT Arduino is expecting Serial communication
 
 //Set up pins and outputs
-//#define XBEE_INPUT // Will use the XBEE for user input
-
 //#define tempPin A0
 //#define floodPin 5
 //#define batteryPin A2 // ??Shouldn't there be two battery pins??
@@ -25,10 +26,28 @@ bool canSeeMissionBuoy = false;
 int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
 int CLOSE_BUOY_AREA = 3000; // Change to tune how close robot comes to buoy before turning
 bool missionBuoyIsClose = false; // Set depending on the size of the buoy the pixyCam sees
+// From Arduino API section in http://www.cmucam.org/projects/cmucam5/wiki/Hooking_up_Pixy_to_a_Microcontroller_(like_an_Arduino)
+#define X_MAX 319 // maximum horizontal position on pixycam. Min is 0.
+#define X_CENTER X_MAX / 2 // horizontal center of the pixycam
+#define Y_MAX 199 // maximum vertical position on pixycam. Min is 0.
 
+// Servo Movement Timing Variables
 long unsigned lastMoveTime = 0; // Keeps track of the last time we calculated tail positions. 0 indicates it's never been initialized.
 long unsigned moveTimer = 0; // Keeps track of the tail's phase. Always counts up, but speed can change.
-int tailPitch, tailYaw; // The position where the tail *should* be
+int moveDelayTime = 50; // Every couple of ms recalculate tail/yaw positioning.
+// Must make sure that the time delay is smaller than the time step of moving the servo at a constant period
+int fastFlapPeriod = 1 * 1000; // 1 full cycle in x milliseconds
+int slowFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
+
+// Servo Positions: ??Need calibration?? Look into making sure that the servoLeft/Right are not negative, since transmitting unsigned bytes.
+int yawServoLeft = 0; // degrees
+int yawServoRight = 180; // degrees
+int tailServoLeft = 0; // degrees
+int tailServoRight = 180; // degrees
+int servoAngleChange = 5; // Smallest value by which to increment servo position
+int yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
+int tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
+int tailDir = 1; // If 1: yaw servo is moving to the right (incrementing). If -1: yaw servo is moving to the left (decrementing)
 
 enum robotState {
   STANDBY, // Waiting for GO signal
@@ -45,7 +64,8 @@ enum robotState dolphinState;
 void setup() {
   setupPins();
   setupPixy();
-
+  setupI2C();
+  
   Serial.begin(9600); // Start for serial communication
   if(!areSystemsOK()){
     dolphinState = HELPME;
@@ -57,6 +77,7 @@ void setup() {
 
 void loop() {
   if(dolphinState == STANDBY){
+    Serial.println("Waiting");
     downloadMission();//attempt to download mission here with Serial
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
@@ -102,6 +123,111 @@ void loop() {
       printDolphinState();
     } // Maybe need else statement to send to OCU a final victory report.
   }
+
+//  sendActParams(); // Ping the ACT Arduino
+}
+
+// Transmits STATE, YAW POSITION, TAIL POSITION
+void sendActParams(){
+  if(getActParams()){
+    Wire.beginTransmission(ACT_ADDRESS);
+    // Transmit state
+    Wire.write(dolphinState);
+    Wire.write(",");
+    // Transmit yaw position
+    Wire.write(yawServoPos);
+    Wire.write(",");
+    Wire.write(tailServoPos);
+    Wire.write(";");
+    Wire.endTransmission();
+  }
+  
+}
+
+// Return true if it is time to send act parameters
+boolean getActParams(){
+  if(millis() - lastMoveTime >= moveDelayTime){
+    // check for updates to the servo positions
+    switch(dolphinState){
+    case STANDBY:
+      getStandbyActParams();
+      break;
+      
+    case SEARCH:
+      getSearchActParams();
+      break;
+      
+    case APPROACH:
+      getApproachActParams();
+      break;
+      
+    case VICTORY:
+      getVictoryActParams();
+      break;
+      
+    case HELPME: // Default case is helpme case. If our state is not one of the above, we have a problem
+    default:
+      getHelpmeActParams();
+      break;
+    }
+  }
+}
+
+void getStandbyActParams(){
+  yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
+  tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
+}
+
+// When the robot is searching and no buoy has yet been found, want it to continuously circle
+// Can achieve by setting yaw to extreme (for tight turning radius) and beating the tail
+// Want to turn in the same direction because if the transition to the Approach state causes
+// the robot to lose the buoy, want to keep searching in that direction again.
+void getSearchActParams(){
+  yawServoPos = yawServoRight; // stays constant.
+  updateTailPosition(fastFlapPeriod);
+}
+
+// When the robot is approaching, want to keep buoy centered in vision
+// Can achieve by beating the tail at a reasonable frequency and adjusting yaw continuously
+void getApproachActParams(){
+  if(buoyX < X_CENTER){ // Buoy us to the left of center
+    yawServoPos -= servoAngleChange; // Move the servo to the left
+  }
+  if(buoyX > X_CENTER){ // Buoy is to the right of center
+    yawServoPos += servoAngleChange;
+  }
+  // otherwise, the buoy is straight on, do not change yaw. We can also change the statements above to give
+  // more leeway. Say, if the center of the blob is within 10 of the center, keep going straight.
+
+  updateTailPosition(slowFlapPeriod);
+}
+
+// For now, the victory transition state can stay in its exact position
+// Can do a funky thing when the mission has been ended later.
+void getVictoryActParams(){
+  yawServoPos = yawServoPos;
+  tailServoPos = tailServoPos;
+}
+
+// Helpme mode has to press the estop, so the servo positions will not change.
+void getHelpmeActParams(){
+  yawServoPos = yawServoPos;
+  tailServoPos = tailServoPos;
+}
+
+// Moving the tail position at a constant frequency
+void updateTailPosition(int period){
+  int numStepsInCycle = 2 * abs(yawServoRight - yawServoLeft) / servoAngleChange; // Number of steps to complete full period with servoAngleChange update
+  int timeToMove = period / numStepsInCycle; // Need to move servo every x milliseconds to achieve this frequency
+  
+  if(millis() - lastMoveTime >= timeToMove){ // Update servo direction only if correct amount of time has passed
+    // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
+    if(tailServoPos + tailDir * servoAngleChange > tailServoRight || tailServoPos + tailDir * servoAngleChange < tailServoLeft){
+      // Switch direction
+      tailDir *= -1;
+    }
+    tailServoPos += tailDir * servoAngleChange; // Update tail servo pos
+  }
 }
 
 void incrementMissionTarget(){
@@ -126,7 +252,7 @@ void printDolphinState(){
       Serial.println("VICTORY");
       break;
     case HELPME:
-      Serial.println("HELME");
+      Serial.println("HELPME");
       break;
     default:
       Serial.println("DODO");
@@ -150,6 +276,10 @@ void setupPins(){
 
 void setupPixy() {
   pixy.init();
+}
+
+void setupI2C(){
+  Wire.begin(8); // The address is optional for the master
 }
 
 bool readPixyCam() {
@@ -192,7 +322,6 @@ bool readPixyCam() {
   
   return canSeeMissionBuoy;
 }
-
 
 /*
  * Function: isBatteryVoltageOK 
@@ -270,7 +399,28 @@ bool isFloodSensorOK() {
 
 void downloadMission() {
   #ifdef XBEE_INPUT
-    // DO SOMETHING
+    Serial.println("Hoora, XBEE!");
+    hasMission = false;
+    if (Serial.available()){ // Serial port available for communication
+      mission = Serial.readStringUntil('\n'); // Read until a newline
+      lengthMission = mission.length();
+
+      if (lengthMission == 0) {
+        Serial.println("Got invalid mission string.");
+        return;
+      }
+      for (int i = 0; i < lengthMission; i++) {
+        char char_i = mission[i];
+        if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
+          Serial.println("Got invalid mission string.");
+          return;
+        }
+      }
+      hasMission = true;
+    }
+    else{
+      Serial.println("Not available");
+    }
   #else
     hasMission = false;
     if (Serial.available()){ // Serial port available for communication
@@ -289,6 +439,9 @@ void downloadMission() {
         }
       }
       hasMission = true;
+    }
+    else{
+      Serial.println("Not available");
     }
   #endif
   
