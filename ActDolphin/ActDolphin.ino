@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <Servo.h>
-#define ledPin 13 //What pin is this actually?
+#define ledPin 13 // ?? WE HAVE THREE LEDS ??
 #define eStopPin 8
 
 // Servos need PWM pins
@@ -13,7 +13,7 @@ char servo[2];
 int servoPos;
 
 int yawServoPos; //tail servo
-int bodyServoPos; //body servo
+int tailServoPos; //body servo
 
 enum robotState {
   STANDBY, // No movement
@@ -74,6 +74,10 @@ void setupActPins(){
   pinMode(eStopPin, OUTPUT);
 }
 
+void freezeAllMotors(){
+  
+}
+
 void pushEStop(){
   digitalWrite(eStopPin, LOW); // No current should be going to the Relay
 }
@@ -88,10 +92,10 @@ void receiveEvent(int bytes) {
     servopos = int(message.substring(1));
     message = "";
     if (servo == "t") {
-      servotpos = servopos;
+      tailServoPos = servopos;
     }
     else {
-      servobpos = servopos;
+      yawServoPos = servopos;
     }
   }
 }

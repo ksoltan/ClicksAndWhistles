@@ -68,13 +68,15 @@ void loop() {
     if(foundMissionBuoy()){
       dolphinState = APPROACH;
     }
-  } else if(dolphinState == APPROACH){
+  }
+  else if(dolphinState == APPROACH){
     if(isTooCloseToMissionBuoy()){
       dolphinState = VICTORY; // Use this state to update mission.
     } else if(lostMissionBuoy()){
       dolphinState = SEARCH;
     } // Maybe need an else statement to get the coordinates of next movement
-  } else if(dolphinState == VICTORY){
+  }
+  else if(dolphinState == VICTORY){
     if(!finishedMission()){
       incrementMissionTarget();
       dolphinState = SEARCH;
