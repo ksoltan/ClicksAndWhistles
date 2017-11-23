@@ -4,12 +4,12 @@
 #define eStopPin 8
 
 // Servos need PWM pins
-#define yawServoPin 9
+#define bodyServoPin 9
 #define tailServoPin 10
 
 int x = 0;
-char message[10];
-char servo[2];
+String message;
+char servo;
 int servoPos;
 
 int yawServoPos; //tail servo
@@ -41,7 +41,7 @@ void loop() {
 //  receiveActParameters(); // Receive state, yaw, pitch1, pitch2 from SENSE/THINK Arduino.
   switch(dolphinState){
     case STANDBY:
-      freezeAllMotors();
+//      freezeAllMotors();
       break;
       
     case SEARCH:
@@ -65,8 +65,8 @@ void loop() {
       break;
   }
   
-  analogWrite(yawServoPin, yawServoPos);
   analogWrite(tailServoPin, tailServoPos);
+  analogWrite(bodyServoPin, bodyServoPos);
 }
 
 void setupActPins(){
@@ -83,11 +83,11 @@ void pushEStop(){
 }
 
 void receiveEvent(int bytes) {
-  x = Wire.read();    // read one character from the I2C
-  if (x != ";"){
-    message = message + x;
-  }
-  else {
+  if (Wire.available() == 4){ // check if full message is recieved
+    for (int i=0; i<5; i++){
+      char c = Wire.read();
+      message[i] = c;
+    }
     servo = message[0];
     servopos = int(message.substring(1));
     message = "";

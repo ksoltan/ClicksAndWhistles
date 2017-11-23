@@ -17,7 +17,10 @@ void loop() {
   delay(1000);
 }
 
-void commandMotor(char[2] motor, int motorPos){
-  Wire.write(motor + motorPos + ";");
+void commandMotor(char motor, int motorPos){
+  Wire.write(motor);
+  if (motorPos < 100) Wire.write('0');
+  if (motorPos < 10) Wire.write('0');
+  Wire.write(motorPos);
 }
 
