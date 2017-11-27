@@ -9,8 +9,8 @@ int slowFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
 // Servo Positions: ??Need calibration?? Look into making sure that the servoLeft/Right are not negative, since transmitting unsigned bytes.
 int yawServoLeft = 10; // degrees
 int yawServoRight = 150; // degrees
-int tailServoLeft = 10; // degrees
-int tailServoRight = 150; // degrees
+int tailServoLeft = 0; // degrees
+int tailServoRight = 180; // degrees
 int servoAngleChange = 5; // Smallest value by which to increment servo position
 int yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
 int tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
@@ -18,7 +18,7 @@ int tailDir = 1; // If 1: yaw servo is moving to the right (incrementing). If -1
 
 // Moving the tail position at a constant frequency
 void updateTailPosition(int period){
-  int numStepsInCycle = 2 * abs(yawServoRight - yawServoLeft) / servoAngleChange; // Number of steps to complete full period with servoAngleChange update
+  int numStepsInCycle = 2 * abs(tailServoRight - tailServoLeft) / servoAngleChange; // Number of steps to complete full period with servoAngleChange update
   int timeToMove = period / numStepsInCycle; // Need to move servo every x milliseconds to achieve this frequency
   
   if(millis() - lastMoveTime >= timeToMove){ // Update servo direction only if correct amount of time has passed
@@ -28,6 +28,7 @@ void updateTailPosition(int period){
       tailDir *= -1;
     }
     tailServoPos += tailDir * servoAngleChange; // Update tail servo pos
+    lastMoveTime = millis();
   }
 }
 
@@ -42,7 +43,7 @@ void getStandbyActParams(){
 // the robot to lose the buoy, want to keep searching in that direction again.
 void getSearchActParams(){
   yawServoPos = yawServoRight; // stays constant.
-  updateTailPosition(fastFlapPeriod);
+  updateTailPosition(slowFlapPeriod);
 }
 
 // When the robot is approaching, want to keep buoy centered in vision

@@ -1,27 +1,25 @@
+/* Sweep
+ by BARRAGAN <http://barraganstudio.com>
+ This example code is in the public domain.
+
+ modified 8 Nov 2013
+ by Scott Fitzgerald
+ http://www.arduino.cc/en/Tutorial/Sweep
+*/
 #include <Wire.h>
 #include <Servo.h>
-#define ledPin 13 // ?? WE HAVE THREE LEDS ??
-#define eStopPin 8
 #define ACT_ADDRESS 8
+//String message;
+//char servo;
+//int servoPos;
 
-// Servos need PWM pins
+int tailServoPos = 0;
+int yawServoPos = 0;
 #define yawServoPin 5
 #define tailServoPin 6
-
-int x = 0;
-String message;
-char servo;
-int servoPos;
-
-// Timing variables
-int servoWaitTime = 15; // ms from the tutorial for servo to get to its position
-int timeLastMoved = 0;
-
 Servo yawServo;
-Servo tailServo;
-
-int yawServoPos; //tail servo
-int tailServoPos; //body servo
+Servo tailServo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
 
 enum robotState {
   STANDBY, // No movement
@@ -33,90 +31,36 @@ enum robotState {
 
 enum robotState dolphinState;
 
-//check that systems are okay; assign initial state accordingly
 void setup() {
-//  setupActPins();
-  setupServos();
-
-  // Start the I2C Bus as Slave on address 8
+  tailServo.attach(tailServoPin);  // attaches the servo on pin 9 to the servo object
+  yawServo.attach(yawServoPin);
+  Serial.begin(4800);
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
   Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
-  Serial.begin(4800); // XBee is using 9600. Would like to monitor packets received from I2C
+
 }
 
 void loop() {
-  if(millis() - timeLastMoved > servoWaitTime){
-    timeLastMoved = millis();
-//    switch(dolphinState){
-//      case STANDBY:
-//        freezeAllMotors();
-//        blinkStandbySignal();
-//        break;
-//        
-//      case SEARCH:
-//        blinkSearchSignal();
-//        break;
-//        
-//      case APPROACH:
-//        blinkApproachSignal();
-//        break;
-//        
-//      case VICTORY:
-//        blinkVictorySignal();
-//        break;
-//        
-//      case HELPME:
-//        blinkHelpmeSignal();
-//        pushEStop(); // Turn off servos
-//        break;
-//        
-//      default:
-//        break;
-//    }
-  
-  //  printDolphinState();
-  
-    yawServo.write(yawServoPos);
-    tailServo.write(tailServoPos);
-  //  analogWrite(yawServoPin, yawServoPos);
-  //  analogWrite(tailServoPin, tailServoPos);
-  }
-}
-
-void setupActPins(){
-  pinMode(ledPin, OUTPUT);
-  pinMode(eStopPin, OUTPUT);
-}
-
-void setupServos(){
-  yawServo.attach(yawServoPin);
-  tailServo.attach(tailServoPin);
-}
-
-void freezeAllMotors(){
-  yawServo.write(90);
-  tailServo.write(90);
-}
-
-void pushEStop(){
-  digitalWrite(eStopPin, LOW); // No current should be going to the Relay
+//  updateTailPosition(slowFlapPeriod);
+  tailServo.write(tailServoPos);
+  yawServo.write(yawServoPos);
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
-    
+//    int dolphinState = Wire.read();
     // Next is a comma.
     Wire.read();
 
-    yawServoPos = Wire.read(); // Read the way position
-
+//    yawServoPos = Wire.read(); // Read the way position
+    yawServoPos = Wire.read();
     // Next is a comma.
     Wire.read();
 
     tailServoPos = Wire.read(); // Read the tail position as a byte
-    Serial.println("State: " + String(dolphinState) + ", YAW: " + (int)yawServoPos + ", TAIL: " + (int)tailServoPos);
+    Serial.println("TAIL: " + (int)tailServoPos);
     
     // Check that the last character is semicolon
     if(Wire.read() != ';'){
@@ -125,44 +69,3 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
   }
 }
 
-void printDolphinState(){
-  switch(dolphinState){
-    case STANDBY:
-      Serial.println("STANDBY");
-      break;
-    case SEARCH:
-      Serial.println("SEARCH");
-      break;
-    case APPROACH:
-      Serial.println("APPROACH");
-      break;
-    case VICTORY:
-      Serial.println("VICTORY");
-      break;
-    case HELPME:
-      Serial.println("HELME");
-      break;
-    default:
-      Serial.println("404");
-      break;
-  }
-}
-
-void blinkStandbySignal(){
-  digitalWrite(ledPin, HIGH);
-}
-void blinkSearchSignal(){
-  digitalWrite(ledPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
-}
-
-void blinkApproachSignal(){
-  digitalWrite(ledPin, millis() % 350 > 250 ? HIGH : LOW); //Blink every 350ms, asymmetrically
-}
-
-void blinkVictorySignal(){
-  digitalWrite(ledPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
-}
-
-void blinkHelpmeSignal(){
-  digitalWrite(ledPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
-}
