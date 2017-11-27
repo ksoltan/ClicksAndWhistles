@@ -15,3 +15,11 @@ bool hasMission = false; // The mission comes from the computer
 String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
 int lengthMission = 0;
 int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
+
+void resetMission(){
+  hasMission = false;
+  mission = "";
+  lengthMission = 0;
+  current_mission_step = 0;
+}
+

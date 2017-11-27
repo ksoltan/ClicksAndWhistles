@@ -9,17 +9,15 @@
 #include <Wire.h>
 #include <Servo.h>
 #define ACT_ADDRESS 8
-//String message;
-//char servo;
-//int servoPos;
-
+#define ledPin 13
 int tailServoPos = 0;
 int yawServoPos = 0;
+boolean attachedServos = false;
+
 #define yawServoPin 5
 #define tailServoPin 6
 Servo yawServo;
-Servo tailServo;  // create servo object to control a servo
-// twelve servo objects can be created on most boards
+Servo tailServo;
 
 enum robotState {
   STANDBY, // No movement
@@ -32,8 +30,7 @@ enum robotState {
 enum robotState dolphinState;
 
 void setup() {
-  tailServo.attach(tailServoPin);  // attaches the servo on pin 9 to the servo object
-  yawServo.attach(yawServoPin);
+  setupServos();
   Serial.begin(4800);
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
@@ -41,10 +38,51 @@ void setup() {
 
 }
 
+void setupServos(){
+  if(!attachedServos){
+    yawServo.attach(yawServoPin);
+    tailServo.attach(tailServoPin);  // attaches the servo on pin 9 to the servo object
+    attachedServos = true;
+  }
+}
 void loop() {
-//  updateTailPosition(slowFlapPeriod);
-  tailServo.write(tailServoPos);
   yawServo.write(yawServoPos);
+  tailServo.write(tailServoPos);
+  
+  switch(dolphinState){
+    case STANDBY:
+      detachAllMotors();
+      blinkStandbySignal();
+      break;
+      
+    case SEARCH:
+      setupServos(); // If the servos were in standby mode, attach them.
+      blinkSearchSignal();
+      break;
+      
+    case APPROACH:
+      blinkApproachSignal();
+      break;
+      
+    case VICTORY:
+      blinkVictorySignal();
+      break;
+      
+    case HELPME:
+      blinkHelpmeSignal();
+//      pushEStop(); // Turn off servos
+      detachAllMotors();
+      break;
+      
+    default:
+      break;
+  }
+}
+
+void detachAllMotors(){
+  yawServo.detach();
+  tailServo.detach();
+  attachedServos = false;
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
@@ -68,4 +106,44 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
     }
   }
 }
+void printDolphinState(){
+  switch(dolphinState){
+    case STANDBY:
+      Serial.println("STANDBY");
+      break;
+    case SEARCH:
+      Serial.println("SEARCH");
+      break;
+    case APPROACH:
+      Serial.println("APPROACH");
+      break;
+    case VICTORY:
+      Serial.println("VICTORY");
+      break;
+    case HELPME:
+      Serial.println("HELME");
+      break;
+    default:
+      Serial.println("404");
+      break;
+  }
+}
 
+void blinkStandbySignal(){
+  digitalWrite(ledPin, HIGH);
+}
+void blinkSearchSignal(){
+  digitalWrite(ledPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
+}
+
+void blinkApproachSignal(){
+  digitalWrite(ledPin, millis() % 350 > 250 ? HIGH : LOW); //Blink every 350ms, asymmetrically
+}
+
+void blinkVictorySignal(){
+  digitalWrite(ledPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
+}
+
+void blinkHelpmeSignal(){
+  digitalWrite(ledPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
+}

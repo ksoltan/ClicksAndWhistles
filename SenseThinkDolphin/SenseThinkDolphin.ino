@@ -32,6 +32,7 @@ void loop() {
     hasMission = downloadMission();//attempt to download mission here with Serial
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
+      current_mission_step = 0;
       printDolphinState();
       Serial.print("Mission recieved: ");
       Serial.print(mission);
@@ -71,20 +72,22 @@ void updateDolphinState(){
   
   else if(dolphinState == VICTORY){
     incrementMissionTarget();
-    
-    if(current_mission_step < lengthMission){
+    if(current_mission_step == -1){
+      dolphinState = STANDBY; // Maybe need else statement to send to OCU a final victory report.
+      resetMission();
+    }
+    else
       dolphinState = SEARCH;
       Serial.println(current_mission_step);
       printDolphinState();
-    } // Maybe need else statement to send to OCU a final victory report.
   }
 }
 // Update the target buoy when one is found.
 void incrementMissionTarget(){
-  if(current_mission_step >= lengthMission){
-    return; // Do not increment mission if the end of it is reached
-  }
   current_mission_step++;
+  if(current_mission_step >= lengthMission){
+    current_mission_step = -1; // Indicate mission is over.
+  }
 }
 
 void printDolphinState(){
