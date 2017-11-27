@@ -5,13 +5,17 @@
 #define ACT_ADDRESS 8
 
 // Servos need PWM pins
-#define yawServoPin 9
-#define tailServoPin 10
+#define yawServoPin 5
+#define tailServoPin 6
 
 int x = 0;
 String message;
 char servo;
 int servoPos;
+
+// Timing variables
+int servoWaitTime = 15; // ms from the tutorial for servo to get to its position
+int timeLastMoved = 0;
 
 Servo yawServo;
 Servo tailServo;
@@ -31,46 +35,53 @@ enum robotState dolphinState;
 
 //check that systems are okay; assign initial state accordingly
 void setup() {
-  setupActPins();
-//  setupServos();
+//  setupActPins();
+  setupServos();
 
   // Start the I2C Bus as Slave on address 8
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
   Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
-  Serial.begin(9600); //Enable the serial comunication
+  Serial.begin(4800); // XBee is using 9600. Would like to monitor packets received from I2C
 }
 
 void loop() {
-  switch(dolphinState){
-    case STANDBY:
-      freezeAllMotors();
-      blinkStandbySignal();
-      break;
-      
-    case SEARCH:
-      blinkSearchSignal();
-      break;
-      
-    case APPROACH:
-      blinkApproachSignal();
-      break;
-      
-    case VICTORY:
-      blinkVictorySignal();
-      break;
-      
-    case HELPME:
-      blinkHelpmeSignal();
-      pushEStop(); // Turn off servos
-      break;
-      
-    default:
-      break;
-  }
+  if(millis() - timeLastMoved > servoWaitTime){
+    timeLastMoved = millis();
+//    switch(dolphinState){
+//      case STANDBY:
+//        freezeAllMotors();
+//        blinkStandbySignal();
+//        break;
+//        
+//      case SEARCH:
+//        blinkSearchSignal();
+//        break;
+//        
+//      case APPROACH:
+//        blinkApproachSignal();
+//        break;
+//        
+//      case VICTORY:
+//        blinkVictorySignal();
+//        break;
+//        
+//      case HELPME:
+//        blinkHelpmeSignal();
+//        pushEStop(); // Turn off servos
+//        break;
+//        
+//      default:
+//        break;
+//    }
   
-  analogWrite(yawServoPin, yawServoPos);
-  analogWrite(tailServoPin, tailServoPos);
+  //  printDolphinState();
+  
+    yawServo.write(yawServoPos);
+    tailServo.write(tailServoPos);
+  //  analogWrite(yawServoPin, yawServoPos);
+  //  analogWrite(tailServoPin, tailServoPos);
+  }
 }
 
 void setupActPins(){
@@ -95,8 +106,7 @@ void pushEStop(){
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
-    printDolphinState();
-
+    
     // Next is a comma.
     Wire.read();
 
@@ -106,7 +116,8 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
     Wire.read();
 
     tailServoPos = Wire.read(); // Read the tail position as a byte
-
+    Serial.println("State: " + String(dolphinState) + ", YAW: " + (int)yawServoPos + ", TAIL: " + (int)tailServoPos);
+    
     // Check that the last character is semicolon
     if(Wire.read() != ';'){
       Serial.println("INCORRECTLY RECEIVED");

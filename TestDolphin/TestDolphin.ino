@@ -5,14 +5,13 @@
 #include <Pixy.h>
 #include <Wire.h>
 
-/* Set up Global variables */
-//#define XBEE_INPUT // Will use the XBEE for user input
-#define ACT_ADDRESS 8 // Address at which ACT Arduino is expecting Serial communication
-
 //Set up pins and outputs
 //#define tempPin A0
 //#define floodPin 5
 //#define batteryPin A2 // ??Shouldn't there be two battery pins??
+
+/* Set up Global variables */
+#define ACT_ADDRESS 8 // Address at which ACT Arduino is expecting Serial communication
 
 // Mission definition variables
 bool hasMission = false; // The mission comes from the computer
@@ -77,7 +76,7 @@ void setup() {
 
 void loop() {
   if(dolphinState == STANDBY){
-    Serial.println("Waiting");
+//    Serial.println("Waiting");
     downloadMission();//attempt to download mission here with Serial
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
@@ -398,53 +397,27 @@ bool isFloodSensorOK() {
 }
 
 void downloadMission() {
-  #ifdef XBEE_INPUT
-    Serial.println("Hoora, XBEE!");
-    hasMission = false;
-    if (Serial.available()){ // Serial port available for communication
-      mission = Serial.readStringUntil('\n'); // Read until a newline
-      lengthMission = mission.length();
+  hasMission = false;
+  if (Serial.available()){ // Serial port available for communication
+    mission = Serial.readStringUntil('\n'); // Read until a newline
+    lengthMission = mission.length();
 
-      if (lengthMission == 0) {
+    if (lengthMission == 0) {
+      Serial.println("Got invalid mission string.");
+      return;
+    }
+
+    // Read the mission string, check for invalid characters,
+    // 'r' = red, 'y' = yellow, 'w' = white
+    for (int i = 0; i < lengthMission; i++) {
+      char char_i = mission[i];
+      if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
         Serial.println("Got invalid mission string.");
         return;
       }
-      for (int i = 0; i < lengthMission; i++) {
-        char char_i = mission[i];
-        if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
-          Serial.println("Got invalid mission string.");
-          return;
-        }
-      }
-      hasMission = true;
     }
-    else{
-      Serial.println("Not available");
-    }
-  #else
-    hasMission = false;
-    if (Serial.available()){ // Serial port available for communication
-      mission = Serial.readStringUntil('\n'); // Read until a newline
-      lengthMission = mission.length();
-
-      if (lengthMission == 0) {
-        Serial.println("Got invalid mission string.");
-        return;
-      }
-      for (int i = 0; i < lengthMission; i++) {
-        char char_i = mission[i];
-        if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
-          Serial.println("Got invalid mission string.");
-          return;
-        }
-      }
-      hasMission = true;
-    }
-    else{
-      Serial.println("Not available");
-    }
-  #endif
-  
+    hasMission = true;
+  }
 }
 
 int getCharPixyColor(char c){
