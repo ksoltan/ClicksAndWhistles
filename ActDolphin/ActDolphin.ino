@@ -6,13 +6,13 @@
  by Scott Fitzgerald
  http://www.arduino.cc/en/Tutorial/Sweep
 */
+
 #include <Wire.h>
 #include <Servo.h>
 #define ACT_ADDRESS 8
 #define ledPin 13
 int tailServoPos = 0;
 int yawServoPos = 0;
-boolean attachedServos = false;
 
 #define yawServoPin 5
 #define tailServoPin 6
@@ -39,24 +39,20 @@ void setup() {
 }
 
 void setupServos(){
-  if(!attachedServos){
-    yawServo.attach(yawServoPin);
-    tailServo.attach(tailServoPin);  // attaches the servo on pin 9 to the servo object
-    attachedServos = true;
-  }
+  yawServo.attach(yawServoPin);
+  tailServo.attach(tailServoPin);  // attaches the servo on pin 9 to the servo object
 }
+
 void loop() {
   yawServo.write(yawServoPos);
   tailServo.write(tailServoPos);
   
   switch(dolphinState){
     case STANDBY:
-      detachAllMotors();
       blinkStandbySignal();
       break;
       
     case SEARCH:
-      setupServos(); // If the servos were in standby mode, attach them.
       blinkSearchSignal();
       break;
       
@@ -70,8 +66,6 @@ void loop() {
       
     case HELPME:
       blinkHelpmeSignal();
-//      pushEStop(); // Turn off servos
-      detachAllMotors();
       break;
       
     default:
@@ -82,7 +76,6 @@ void loop() {
 void detachAllMotors(){
   yawServo.detach();
   tailServo.detach();
-  attachedServos = false;
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
