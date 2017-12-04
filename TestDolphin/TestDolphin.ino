@@ -4,6 +4,10 @@
 #include <SPI.h>
 #include <Pixy.h>
 #include <Wire.h>
+#include <SoftwareSerial.h>
+// XBee's DOUT (TX) is connected to pin 2 (Arduino's Software RX)
+// XBee's DIN (RX) is connected to pin 3 (Arduino's Software TX)
+SoftwareSerial XBee(2, 3); // RX, TX
 
 //Set up pins and outputs
 //#define tempPin A0
@@ -14,9 +18,9 @@
 #define ACT_ADDRESS 8 // Address at which ACT Arduino is expecting Serial communication
 
 // Mission definition variables
-bool hasMission = false; // The mission comes from the computer
-String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
-int lengthMission = 0;
+bool hasMission = true; // The mission comes from the computer
+String mission = "ryw"; //r for red, y for yellow, w for white, e for end (or just look at the length)
+int lengthMission = 3;
 int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
 
 // Pixycam vision variables
@@ -65,7 +69,8 @@ void setup() {
   setupPixy();
   setupI2C();
   
-  Serial.begin(9600); // Start for serial communication
+//  Serial.begin(9600); // Start for serial communication
+  XBee.begin(9600);
   if(!areSystemsOK()){
     dolphinState = HELPME;
   }else{
@@ -81,9 +86,9 @@ void loop() {
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
       printDolphinState();
-      Serial.print("Mission recieved: ");
-      Serial.print(mission);
-      Serial.println();
+      XBee.print("Mission recieved: ");
+      XBee.print(mission);
+      XBee.println();
     }
     else return; // Otherwise keep waiting for mission, remain in STANDBY mode
   }
@@ -118,12 +123,12 @@ void loop() {
     
     if(current_mission_step < lengthMission){
       dolphinState = SEARCH;
-      Serial.println(current_mission_step);
+      XBee.println(current_mission_step);
       printDolphinState();
     } // Maybe need else statement to send to OCU a final victory report.
   }
 
-//  sendActParams(); // Ping the ACT Arduino
+  sendActParams(); // Ping the ACT Arduino
 }
 
 // Transmits STATE, YAW POSITION, TAIL POSITION
@@ -239,22 +244,22 @@ void incrementMissionTarget(){
 void printDolphinState(){
   switch(dolphinState){
     case STANDBY:
-      Serial.println("STANDBY");
+      XBee.println("STANDBY");
       break;
     case SEARCH:
-      Serial.println("SEARCH");
+      XBee.println("SEARCH");
       break;
     case APPROACH:
-      Serial.println("APPROACH");
+      XBee.println("APPROACH");
       break;
     case VICTORY:
-      Serial.println("VICTORY");
+      XBee.println("VICTORY");
       break;
     case HELPME:
-      Serial.println("HELPME");
+      XBee.println("HELPME");
       break;
     default:
-      Serial.println("DODO");
+      XBee.println("DODO");
       break;
   }
 }
@@ -306,9 +311,9 @@ bool readPixyCam() {
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
     missionBuoyIsClose = (maxArea > CLOSE_BUOY_AREA) ? true : false;
-//    Serial.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
+    XBee.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
     if(missionBuoyIsClose){
-      Serial.println("Mission buoy is close");  
+      XBee.println("Mission buoy is close");  
     }
     
   }
@@ -398,12 +403,12 @@ bool isFloodSensorOK() {
 
 void downloadMission() {
   hasMission = false;
-  if (Serial.available()){ // Serial port available for communication
-    mission = Serial.readStringUntil('\n'); // Read until a newline
+  if (XBee.available()){ // Serial port available for communication
+    mission = XBee.readStringUntil('\n'); // Read until a newline
     lengthMission = mission.length();
 
     if (lengthMission == 0) {
-      Serial.println("Got invalid mission string.");
+      XBee.println("Got invalid mission string.");
       return;
     }
 
@@ -412,7 +417,7 @@ void downloadMission() {
     for (int i = 0; i < lengthMission; i++) {
       char char_i = mission[i];
       if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
-        Serial.println("Got invalid mission string.");
+        XBee.println("Got invalid mission string.");
         return;
       }
     }

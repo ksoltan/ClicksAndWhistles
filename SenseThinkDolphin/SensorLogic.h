@@ -17,15 +17,28 @@ void setupPins(){
     pinMode(batteryPin, INPUT);
   #endif
 
+<<<<<<< HEAD
   pinMode(estop_pin, OUTPUT);
 }
 
 // Press the E-stop in code
+=======
+  #ifdef estop_pin
+    pinMode(estop_pin, OUTPUT);
+  #endif
+}
+
+// Press the E-stop in code. Writing 0 to the relay will stop passing current through it to the servos (make it open).
+>>>>>>> debug_logic
 void freeze_motors(){
   digitalWrite(estop_pin, LOW);
 }
 
+<<<<<<< HEAD
 // Release the E-stop in code
+=======
+// Release the E-stop in code. Allow servos to get power by closing the relay.
+>>>>>>> debug_logic
 void release_motors(){
   digitalWrite(estop_pin, HIGH);
 }

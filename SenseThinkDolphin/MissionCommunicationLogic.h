@@ -1,16 +1,21 @@
 void setupMissionCom(){
-  Serial.begin(9600);
+  XBee.begin(9600);
 }
 
 bool downloadMission() {
 //  hasMission = false;
+<<<<<<< HEAD
   if (Serial.available()){ // Serial port available for communication
     Serial.println("Waiting");
     mission = Serial.readStringUntil('\n'); // Read until a newline
+=======
+  if (XBee.available()){ // Serial port available for communication
+    mission = XBee.readStringUntil('\n'); // Read until a newline
+>>>>>>> debug_logic
     lengthMission = mission.length();
 
     if (lengthMission == 0) {
-      Serial.println("Got invalid mission string.");
+      XBee.println("Got invalid mission string.");
       return false;
     }
 
@@ -19,7 +24,7 @@ bool downloadMission() {
     for (int i = 0; i < lengthMission; i++) {
       char char_i = mission[i];
       if (char_i != 'r' && char_i != 'y' && char_i != 'w') {
-        Serial.println("Got invalid mission string.");
+        XBee.println("Got invalid mission string.");
         return false;
       }
     }
