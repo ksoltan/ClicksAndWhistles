@@ -19,24 +19,27 @@ void setup() {
   
   if(!areSystemsOK()){
     dolphinState = HELPME;
+    printDolphinState();
   }else{
     dolphinState = STANDBY;
+    printDolphinState();
+    XBee.print("Input Mission (r-red, y-yellow, w-white): ");
   }
   
-  printDolphinState();
+  
 }
 
 void loop() {
   if(dolphinState == STANDBY){
-//    Serial.println("Waiting");
-    hasMission = downloadMission();//attempt to download mission here with Serial
+//    XBee.println("Waiting");
+    hasMission = downloadMission();//attempt to download mission here with XBee
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
       current_mission_step = 0;
+      XBee.print("\nMission recieved: ");
+      XBee.print(mission);
+      XBee.println();
       printDolphinState();
-      Serial.print("Mission recieved: ");
-      Serial.print(mission);
-      Serial.println();
     }
     else return; // Otherwise keep waiting for mission, remain in STANDBY mode
   }
@@ -47,6 +50,7 @@ void loop() {
 }
 
 void updateDolphinState(){
+//  XBee.println("Updating state");
     // THINK: Figures out which state the robot should be in.
   if(!areSystemsOK()){
     dolphinState = HELPME; 
@@ -67,18 +71,19 @@ void updateDolphinState(){
     } else if(!canSeeMissionBuoy){
       dolphinState = SEARCH;
       printDolphinState();
-    } // Maybe need an else statement to get the coordinates of next movement
+    }
   }
   
   else if(dolphinState == VICTORY){
     incrementMissionTarget();
     if(current_mission_step == -1){
-      dolphinState = STANDBY; // Maybe need else statement to send to OCU a final victory report.
+      dolphinState = STANDBY;
       resetMission();
+      XBee.print("Input Mission (r-red, y-yellow, w-white): ");
     }
     else
       dolphinState = SEARCH;
-      Serial.println(current_mission_step);
+      XBee.println(current_mission_step);
       printDolphinState();
   }
 }
@@ -94,22 +99,22 @@ void printDolphinState(){
   #ifdef debugDolphinState
     switch(dolphinState){
       case STANDBY:
-        Serial.println("STANDBY");
+        XBee.println("STANDBY");
         break;
       case SEARCH:
-        Serial.println("SEARCH");
+        XBee.println("SEARCH");
         break;
       case APPROACH:
-        Serial.println("APPROACH");
+        XBee.println("APPROACH");
         break;
       case VICTORY:
-        Serial.println("VICTORY");
+        XBee.println("VICTORY");
         break;
       case HELPME:
-        Serial.println("HELPME");
+        XBee.println("HELPME");
         break;
       default:
-        Serial.println("DODO");
+        XBee.println("DODO");
         break;
     }
   #endif

@@ -1,3 +1,9 @@
+// XBee Communication
+// To avoid using the Serial Monitor, all communication is done through Software Serial.
+// The Sparkfun XBee board used pins 2 (DOUT - RX) and 3 (DIN - TX).
+#include <SoftwareSerial.h>
+SoftwareSerial XBee(2, 3); // RX, TX
+
 enum robotState {
   STANDBY, // Waiting for GO signal
   SEARCH, // Searching for next target
@@ -10,6 +16,7 @@ enum robotState {
 enum robotState dolphinState;
 
 // Mission Variables
+
 // Mission definition variables
 bool hasMission = false; // The mission comes from the computer
 String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)

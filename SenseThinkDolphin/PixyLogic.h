@@ -57,14 +57,16 @@ bool readPixyCam() {
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
     missionBuoyIsClose = (maxArea > CLOSE_BUOY_AREA) ? true : false;
-//    Serial.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
+//    XBee.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
+    digitalWrite(13, HIGH);
     if(missionBuoyIsClose){
-      Serial.println("Mission buoy is close");  
+      XBee.println("Mission buoy is close");  
     }
     
   }
   else {
-//    Serial.println("No buoy found.");
+    digitalWrite(13, LOW);
+//    XBee.println("No buoy found.");
     canSeeMissionBuoy = false;
     buoyX = -1;
     buoyY = -1;
