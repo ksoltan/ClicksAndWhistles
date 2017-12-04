@@ -31,7 +31,7 @@ enum robotState dolphinState;
 
 void setup() {
   setupServos();
-  Serial.begin(4800);
+  Serial.begin(19200);
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
   Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
@@ -88,6 +88,7 @@ void detachAllMotors(){
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
+    printDolphinState();
 //    int dolphinState = Wire.read();
     // Next is a comma.
     Wire.read();
@@ -98,7 +99,9 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
     Wire.read();
 
     tailServoPos = Wire.read(); // Read the tail position as a byte
-    Serial.println("TAIL: " + (int)tailServoPos);
+    Serial.print("TAIL: ");
+    Serial.print((int)tailServoPos);
+    Serial.print("\n");
     
     // Check that the last character is semicolon
     if(Wire.read() != ';'){
