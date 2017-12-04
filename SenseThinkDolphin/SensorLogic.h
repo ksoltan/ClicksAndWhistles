@@ -2,7 +2,7 @@
 //#define tempPin A0
 //#define floodPin 5
 //#define batteryPin A2 // ??Shouldn't there be two battery pins??
-
+#define estop_pin 8
 
 void setupPins(){
   #ifdef tempPin
@@ -16,6 +16,20 @@ void setupPins(){
   #ifdef batteryPin
     pinMode(batteryPin, INPUT);
   #endif
+
+  #ifdef estop_pin
+    pinMode(estop_pin, OUTPUT);
+  #endif
+}
+
+// Press the E-stop in code. Writing 0 to the relay will stop passing current through it to the servos (make it open).
+void freeze_motors(){
+  digitalWrite(estop_pin, LOW);
+}
+
+// Release the E-stop in code. Allow servos to get power by closing the relay.
+void release_motors(){
+  digitalWrite(estop_pin, HIGH);
 }
 
 bool isEStopOK(){

@@ -1,3 +1,5 @@
+// Control code for the Sense/Think Arduino of Team Clicks and Whistles robotic dolphin.
+
 // Clicks and Whistles sense/think Arduino testing code.
 // Author: Katya
 
@@ -25,8 +27,7 @@ void setup() {
     printDolphinState();
     XBee.print("Input Mission (r-red, y-yellow, w-white): ");
   }
-  
-  
+  freeze_motors(); // Make sure servos are off at the beginning of mission.
 }
 
 void loop() {
@@ -35,6 +36,7 @@ void loop() {
     hasMission = downloadMission();//attempt to download mission here with XBee
     if(hasMission){ // when get one, start searching
       dolphinState = SEARCH;
+      release_motors(); // Allow power to the motors.
       current_mission_step = 0;
       XBee.print("\nMission recieved: ");
       XBee.print(mission);
@@ -55,6 +57,7 @@ void updateDolphinState(){
   if(!areSystemsOK()){
     dolphinState = HELPME; 
     printDolphinState();
+    freeze_motors();
   }
   
   if(dolphinState == SEARCH){
@@ -79,6 +82,7 @@ void updateDolphinState(){
     if(current_mission_step == -1){
       dolphinState = STANDBY;
       resetMission();
+      freeze_motors();
       XBee.print("Input Mission (r-red, y-yellow, w-white): ");
     }
     else
