@@ -28,7 +28,6 @@ int yawDir = 1;
 void updateTailPosition(int period){
   int numStepsInCycle = 2 * abs(tailServoRight - tailServoLeft) / servoAngleChange; // Number of steps to complete full period with servoAngleChange update
   int timeToMove = period / numStepsInCycle; // Need to move servo every x milliseconds to achieve this frequency
-  
   if(millis() - lastMoveTimeTail >= timeToMove){ // Update servo direction only if correct amount of time has passed
     // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
     if(tailServoPos + tailDir * servoAngleChange > tailServoRight || tailServoPos + tailDir * servoAngleChange < tailServoLeft){
@@ -56,6 +55,22 @@ void updateYawPosition(int period){
   }
 }
 
+boolean updateYawPositionBool(int period){
+  int numStepsInCycle = 2 * abs(yawServoRight - yawServoLeft) / servoAngleChange; // Number of steps to complete full period with servoAngleChange update
+  int timeToMove = period / numStepsInCycle; // Need to move servo every x milliseconds to achieve this frequency
+  
+  if(millis() - lastMoveTimeYaw >= timeToMove){ // Update servo direction only if correct amount of time has passed
+    // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
+    if(yawServoPos + yawDir * servoAngleChange > yawServoRight || yawServoPos + yawDir * servoAngleChange < yawServoLeft){
+      // Switch direction
+      yawDir *= -1;
+    }
+    yawServoPos += yawDir * servoAngleChange; // Update tail servo pos
+    lastMoveTimeYaw = millis();
+    return true;
+  }
+  return false;
+}
 
 void setup(){
   Serial.begin(9600);
@@ -65,18 +80,22 @@ void setup(){
 }
 
 void loop(){
-  if(millis() - lastMoveTimeTail >= moveDelayTime){
-    updateTailPosition(slowFlapPeriod);
-    tailServo.write(tailServoPos);
-    lastMoveTimeTail = millis(); // Update timer
-    Serial.println(tailServoPos);
-  }
-
-  if(millis() - lastMoveTimeYaw >= moveDelayTime){
-    updateYawPosition(slowFlapPeriod);
-    yawServo.write(yawServoPos);
-    lastMoveTimeYaw = millis(); // Update timer
+  if(updateYawPositionBool(fastFlapPeriod)){
+    tailServo.write(yawServoPos);
     Serial.println(yawServoPos);
   }
+//  if(millis() - lastMoveTimeTail >= moveDelayTime){
+//    updateTailPosition(2 * slowFlapPeriod);
+//    tailServo.write(tailServoPos);
+//    lastMoveTimeTail = millis(); // Update timer
+//    Serial.println(tailServoPos);
+//  }
+//
+//  if(millis() - lastMoveTimeYaw >= moveDelayTime){
+//    updateYawPosition(slowFlapPeriod);
+//    yawServo.write(yawServoPos);
+//    lastMoveTimeYaw = millis(); // Update timer
+//    Serial.println(yawServoPos);
+//  }
 }
 

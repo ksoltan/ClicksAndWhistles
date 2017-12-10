@@ -4,14 +4,8 @@ void setupMissionCom(){
 
 bool downloadMission() {
 //  hasMission = false;
-<<<<<<< HEAD
-  if (Serial.available()){ // Serial port available for communication
-    Serial.println("Waiting");
-    mission = Serial.readStringUntil('\n'); // Read until a newline
-=======
   if (XBee.available()){ // Serial port available for communication
     mission = XBee.readStringUntil('\n'); // Read until a newline
->>>>>>> debug_logic
     lengthMission = mission.length();
 
     if (lengthMission == 0) {

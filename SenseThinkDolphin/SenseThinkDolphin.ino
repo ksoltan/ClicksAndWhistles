@@ -27,13 +27,8 @@ void setup() {
     printDolphinState();
     XBee.print("Input Mission (r-red, y-yellow, w-white): ");
   }
-<<<<<<< HEAD
-  freeze_motors(); // Make sure servos are off at the beginning.
-  
-  printDolphinState();
-=======
   freeze_motors(); // Make sure servos are off at the beginning of mission.
->>>>>>> debug_logic
+
 }
 
 void loop() {
@@ -90,10 +85,7 @@ void updateDolphinState(){
       dolphinState = STANDBY;
       resetMission();
       freeze_motors();
-<<<<<<< HEAD
-=======
       XBee.print("Input Mission (r-red, y-yellow, w-white): ");
->>>>>>> debug_logic
     }
     else
       dolphinState = SEARCH;
