@@ -10,7 +10,8 @@
 #include <Wire.h>
 #include <Servo.h>
 #define ACT_ADDRESS 8
-#define ledPin 13
+#define yellowLedPin 13
+#define blueLedPin 12
 int tailServoPos = 0;
 int yawServoPos = 0;
 
@@ -121,20 +122,25 @@ void printDolphinState(){
 }
 
 void blinkStandbySignal(){
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(yellowLedPin, HIGH);
+  digitalWrite(blueLedPin, HIGH);
 }
 void blinkSearchSignal(){
-  digitalWrite(ledPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
+  digitalWrite(yellowLedPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
+  digitalWrite(blueLedPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
 }
 
 void blinkApproachSignal(){
-  digitalWrite(ledPin, millis() % 350 > 250 ? HIGH : LOW); //Blink every 350ms, asymmetrically
+ digitalWrite(yellowLedPin, millis() % 500 > 250 ? HIGH : LOW); //Blink every 500ms
+  digitalWrite(blueLedPin, millis() % 500 < 250 ? HIGH : LOW); //Blink every 500ms
 }
 
 void blinkVictorySignal(){
-  digitalWrite(ledPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
+  digitalWrite(yellowLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
+  digitalWrite(blueLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
 }
 
 void blinkHelpmeSignal(){
-  digitalWrite(ledPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
+  digitalWrite(yellowLedPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
+  digitalWrite(blueLedPin, millis() % 150 > 75 ? HIGH : LOW); //Blink every 150ms
 }
