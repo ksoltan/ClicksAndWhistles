@@ -10,8 +10,8 @@
 #include <Wire.h>
 #include <Servo.h>
 #define ACT_ADDRESS 8
-#define yellowLedPin 13
-#define blueLedPin 12
+#define yellowLedPin 8
+#define blueLedPin 9
 int tailServoPos = 0;
 int yawServoPos = 0;
 
