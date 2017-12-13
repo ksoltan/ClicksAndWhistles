@@ -2,9 +2,9 @@
 long unsigned lastTailMoveTime = 0; // Keeps track of the last time we calculated tail servo positions. 0 indicates it's never been initialized.
 long unsigned lastUpdateTime = 0; // Keeps track of the last time at which we checked to update act parameters (yaw and tail positions).
 
-int updateDelayTime = 10; // Every couple of ms recalculate tail/yaw positioning. This value has to be low if you want the tail to flap at a very high frequency, because otherwise, it doesn't update fast enough.
+int updateDelayTime = 70; // Every couple of ms recalculate tail/yaw positioning. This value has to be low if you want the tail to flap at a very high frequency, because otherwise, it doesn't update fast enough.
 // Must make sure that the time delay is smaller than the time step of moving the servo at a constant period
-int fastFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
+int fastFlapPeriod = 2.3 * 1000; // 1 full cycle in x milliseconds
 int slowFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
 
 // Servo Positions: ??Need calibration?? Look into making sure that the servoLeft/Right are not negative, since transmitting unsigned bytes.
@@ -12,7 +12,7 @@ int yawServoLeft = 30; // degrees
 int yawServoRight = 130; // degrees
 int tailServoLeft = 65; // degrees Calibrated with test_Servo_Pos in Arduino folder.
 int tailServoRight = 135; // degrees
-int servoAngleChange = 2; // Smallest value by which to increment servo position
+int servoAngleChange = 3; // Smallest value by which to increment servo position
 int yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
 int tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
 int tailDir = 1; // If 1: yaw servo is moving to the right (incrementing). If -1: yaw servo is moving to the left (decrementing)
@@ -20,8 +20,8 @@ int numStepsInTailCycle = 2 * abs(tailServoRight - tailServoLeft) / servoAngleCh
   
 // Moving the tail position at a constant frequency up and down
 void updateTailPosition(int period){
-  int timeToMove = period / numStepsInTailCycle; // Need to move servo every x milliseconds to achieve this frequency
-  
+//  int timeToMove = period / numStepsInTailCycle; // Need to move servo every x milliseconds to achieve this frequency
+  int timeToMove = updateDelayTime;
   if(millis() - lastTailMoveTime >= timeToMove){ // Update servo direction only if correct amount of time has passed
     // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
     if(tailServoPos + tailDir * servoAngleChange > tailServoRight || tailServoPos + tailDir * servoAngleChange < tailServoLeft){
@@ -80,39 +80,52 @@ void getHelpmeActParams(){
 // Currently, defined to send updates at a fixed time interval (which is pretty small).
 // Can change to update only when the tail has moved, or the pixycam not being in the center would trigger a yaw adjustment.
 boolean getActParams(){
-  if(millis() - lastUpdateTime >= updateDelayTime){
-//    Serial.println(lastTailMoveTime);
-    // check for updates to the servo positions
-    switch(dolphinState){
-    case STANDBY:
-      getStandbyActParams();
-      break;
-      
-    case SEARCH:
-      getSearchActParams();
-      break;
-      
-    case APPROACH:
-      getApproachActParams();
-      break;
-      
-    case VICTORY:
-      getVictoryActParams();
-      break;
-      
-    case HELPME: // Default case is helpme case. If our state is not one of the above, we have a problem
-    default:
-      getHelpmeActParams();
-      break;
+  if(millis() - lastTailMoveTime >= updateDelayTime){ // Update servo direction only if correct amount of time has passed
+    // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
+    if(tailServoPos + tailDir * servoAngleChange > tailServoRight || tailServoPos + tailDir * servoAngleChange < tailServoLeft){
+      // Switch direction
+      tailDir *= -1;
     }
-//    Serial.println(tailServoPos);
     
-    lastUpdateTime = millis(); // Update timer
+    tailServoPos += tailDir * servoAngleChange; // Update tail servo pos
+    lastTailMoveTime = millis();
     return true;
-  }
-  
-  else{
+  } else{
     return false;
   }
+//  if(millis() - lastUpdateTime >= updateDelayTime){
+////    Serial.println(lastTailMoveTime);
+//    // check for updates to the servo positions
+//    switch(dolphinState){
+//    case STANDBY:
+//      getStandbyActParams();
+//      break;
+//      
+//    case SEARCH:
+//      getSearchActParams();
+//      break;
+//      
+//    case APPROACH:
+//      getApproachActParams();
+//      break;
+//      
+//    case VICTORY:
+//      getVictoryActParams();
+//      break;
+//      
+//    case HELPME: // Default case is helpme case. If our state is not one of the above, we have a problem
+//    default:
+//      getHelpmeActParams();
+//      break;
+//    }
+////    Serial.println(tailServoPos);
+//    
+//    lastUpdateTime = millis(); // Update timer
+//    return true;
+//  }
+//  
+//  else{
+//    return false;
+//  }
 }
 
