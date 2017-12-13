@@ -32,11 +32,12 @@ enum robotState dolphinState;
 
 void setup() {
   setupServos();
-  Serial.begin(9600);
+  Serial.begin(115200);
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
   Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
-
+  Serial.begin(115200);
+  Serial.println("Hi");
 }
 
 void setupServos(){
@@ -45,9 +46,11 @@ void setupServos(){
 }
 
 void loop() {
+//  yawServo.write(90);
+//  tailServo.write(90);
   yawServo.write(yawServoPos);
   tailServo.write(tailServoPos);
-  
+  Serial.println(tailServoPos);
   switch(dolphinState){
     case STANDBY:
       blinkStandbySignal();
@@ -75,9 +78,10 @@ void loop() {
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
+//  Serial.println("In the receive event");
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
-    printDolphinState();
+//    printDolphinState();
 //    int dolphinState = Wire.read();
     // Next is a comma.
     Wire.read();
@@ -88,9 +92,9 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
     Wire.read();
 
     tailServoPos = Wire.read(); // Read the tail position as a byte
-    Serial.print("TAIL: ");
-    Serial.print((int)tailServoPos);
-    Serial.print("\n");
+//    Serial.print("TAIL: ");
+//    Serial.print((int)tailServoPos);
+//    Serial.print("\n");
     
     // Check that the last character is semicolon
     if(Wire.read() != ';'){
