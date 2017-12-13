@@ -23,10 +23,6 @@ String mission = ""; //r for red, y for yellow, w for white, e for end (or just 
 int lengthMission = 0;
 int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
 
-boolean approaching_timer_set = false;
-long approach_start_time = 0;
-long min_approach_time = 10 * 1000L; // Give robot 15s to move before considering if the area of the buoy is large enough due to different brightnesses of LEDs
-
 void resetMission(){
   hasMission = false;
   mission = "";
@@ -34,3 +30,27 @@ void resetMission(){
   current_mission_step = 0;
 }
 
+void printDolphinState(){
+  #ifdef debugDolphinState
+    switch(dolphinState){
+      case STANDBY:
+        XBee.println("STANDBY");
+        break;
+      case SEARCH:
+        XBee.println("SEARCH");
+        break;
+      case APPROACH:
+        XBee.println("APPROACH");
+        break;
+      case VICTORY:
+        XBee.println("VICTORY");
+        break;
+      case HELPME:
+        XBee.println("HELPME");
+        break;
+      default:
+        XBee.println("DODO");
+        break;
+    }
+  #endif
+}

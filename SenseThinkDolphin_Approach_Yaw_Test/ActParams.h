@@ -9,22 +9,22 @@ int fastFlapPeriod = 1.8 * 1000; // 1 full cycle in x milliseconds
 int slowFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
 
 // Servo Positions: ??Need calibration?? Look into making sure that the servoLeft/Right are not negative, since transmitting unsigned bytes.
-int yawServoLeft = 30; // degrees  Calibrated with test_Servo_Pos in Arduino folder.
+int yawServoLeft = 30; // degrees
 int yawServoRight = 130; // degrees
-
-int tailServoLeft = 65; // degrees (Actually down)
-int tailServoRight = 140; // degrees (Actually up)
+int tailServoLeft = 0; // degrees
+int tailServoRight = 180; // degrees
 int servoAngleChange = 2; // Smallest value by which to increment servo position
 int yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
 int tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
 int tailDir = 1; // If 1: yaw servo is moving to the right (incrementing). If -1: yaw servo is moving to the left (decrementing)
 int numStepsInTailCycle = 2 * abs(tailServoRight - tailServoLeft) / servoAngleChange; // Number of steps to complete full period (up, down, up) motion for the tail with servoAngleChange update
-int numStepsInYawApproachAdjustment = 2 * abs(yawServoRight - yawServoLeft) / servoAngleChange; // Number of steps to complete full sweep (right, left) motion for yaw with servoAngleChange update
+int numStepsInYawApproachAdjustment = 2*abs(yawServoRight - yawServoLeft) / servoAngleChange; // Number of steps to complete full sweep (right, left) motion for yaw with servoAngleChange update
 int yawDir = 1;
 
 // Moving the tail position at a constant frequency up and down
 void updateTailPosition(int period){
   int timeToMove = period / numStepsInTailCycle; // Need to move servo every x milliseconds to achieve this frequency
+  
   if(millis() - lastTailMoveTime >= timeToMove){ // Update servo direction only if correct amount of time has passed
     // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
     if(tailServoPos + tailDir * servoAngleChange > tailServoRight || tailServoPos + tailDir * servoAngleChange < tailServoLeft){
@@ -39,7 +39,7 @@ void updateTailPosition(int period){
 
 void updateYawPosition(int period){
 //  int timeToMove = period / numStepsInYawApproachAdjustment; // Need to move servo every x milliseconds to achieve this frequency
-  int timeToMove = 70;
+  int timeToMove = 50;
   if(millis() - lastYawMoveTime >= timeToMove){ // Update servo direction only if correct amount of time has passed
     // Check to see if the servo will move out of bounds with current direction, either left (too much decrement) or right (too much increment)
     if(yawServoPos + yawDir * servoAngleChange > yawServoRight || yawServoPos + yawDir * servoAngleChange < yawServoLeft){
@@ -51,7 +51,6 @@ void updateYawPosition(int period){
     lastYawMoveTime = millis();
   }
 }
-
 void getStandbyActParams(){
   yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
   tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
@@ -62,26 +61,27 @@ void getStandbyActParams(){
 // Want to turn in the same direction because if the transition to the Approach state causes
 // the robot to lose the buoy, want to keep searching in that direction again.
 void getSearchActParams(){
-  yawServoPos = 0; // stays constant.
-  updateTailPosition(fastFlapPeriod);
+  yawServoPos = yawServoRight; // stays constant.
+  updateTailPosition(slowFlapPeriod);
 }
 
 // When the robot is approaching, want to keep buoy centered in vision
 // Can achieve by beating the tail at a reasonable frequency and adjusting yaw continuously
 void getApproachActParams(){
-if(X_CENTER - buoyX > 10){ // Buoy is to the left of center
+  XBee.print(X_CENTER - buoyX);
+  if(X_CENTER - buoyX > 5){ // Buoy is to the left of center
     yawDir = -1; // Compensate left
     updateYawPosition(slowFlapPeriod);
-//    XBee.print("Yaw Left: ");
-//    XBee.print(yawServoPos);
-//    XBee.print("\n");
+    XBee.print("Yaw Left: ");
+    XBee.print(yawServoPos);
+    XBee.print("\n");
   }
-  if(buoyX - X_CENTER > 10){ // Buoy is to the right of center
+  if(buoyX - X_CENTER > 5){ // Buoy is to the right of center
     yawDir = 1; // Compensate right
     updateYawPosition(slowFlapPeriod);
-//    XBee.print("Yaw Right: ");
-//    XBee.print(yawServoPos);
-//    XBee.print("\n");
+    XBee.print("Yaw Right: ");
+    XBee.print(yawServoPos);
+    XBee.print("\n");
   }
 //  // otherwise, the buoy is straight on, do not change yaw. We can also change the statements above to give
 //  // more leeway. Say, if the center of the blob is within 10 of the center, keep going straight.
@@ -107,6 +107,8 @@ void getHelpmeActParams(){
 // Can change to update only when the tail has moved, or the pixycam not being in the center would trigger a yaw adjustment.
 boolean getActParams(){
   if(millis() - lastUpdateTime >= updateDelayTime){
+    XBee.println("*");
+//    Serial.println(lastTailMoveTime);
     // check for updates to the servo positions
     switch(dolphinState){
     case STANDBY:
@@ -118,6 +120,7 @@ boolean getActParams(){
       break;
       
     case APPROACH:
+//      XBee.println("APPROACH MODE");
       getApproachActParams();
       break;
       

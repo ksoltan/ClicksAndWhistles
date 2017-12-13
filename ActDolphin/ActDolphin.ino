@@ -50,7 +50,7 @@ void loop() {
 //  tailServo.write(90);
   yawServo.write(yawServoPos);
   tailServo.write(tailServoPos);
-  Serial.println(tailServoPos);
+//  Serial.println(tailServoPos);
   switch(dolphinState){
     case STANDBY:
       blinkStandbySignal();
@@ -82,19 +82,20 @@ void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/T
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
 //    printDolphinState();
-//    int dolphinState = Wire.read();
     // Next is a comma.
     Wire.read();
 
 //    yawServoPos = Wire.read(); // Read the way position
     yawServoPos = Wire.read();
-    // Next is a comma.
+    Serial.print("YAW: ");
+    Serial.print((int)yawServoPos);
+    Serial.print("\n");    // Next is a comma.
     Wire.read();
 
     tailServoPos = Wire.read(); // Read the tail position as a byte
-//    Serial.print("TAIL: ");
-//    Serial.print((int)tailServoPos);
-//    Serial.print("\n");
+    Serial.print("TAIL: ");
+    Serial.print((int)tailServoPos);
+    Serial.print("\n");
     
     // Check that the last character is semicolon
     if(Wire.read() != ';'){

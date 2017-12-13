@@ -1,33 +1,35 @@
 #include <Wire.h>
 #include "ActParams.h"
-#include <Servo.h>
+//#include <Servo.h>
 
-//#define debugTailServo true
-#ifdef debugTailServo
-  Servo tailServo;
+//#define debugYawServo true
+#ifdef debugYawServo
+  Servo yawServo;
 #endif
 
-#define wireOn true
+//#define wireOn true
 
 #define ACT_ADDRESS 8 // Address at which ACT Arduino is expecting Serial communication
 
 void setupI2C(){
-  #ifdef wireOn
+//  #ifdef wireOn
     Wire.begin(); // The address is optional for the master
-  #endif
+//  #endif
   
-  #ifdef debugTailServo
-    tailServo.attach(6);
+  #ifdef debugYawServo
+    yawServo.attach(6);
   #endif
  
 }
 
+
+
 // Transmits STATE, YAW POSITION, TAIL POSITION
 void sendActParams(){
-  Serial.println("try get act params" );
+  XBee.println("try get act params" );
   if(getActParams()){
-    Serial.println(tailServoPos);
-    #ifdef wireOn
+//    Serial.println(yawServoPos);
+//    #ifdef wireOn
       Wire.beginTransmission(ACT_ADDRESS);
       // Transmit state
       Wire.write(dolphinState);
@@ -38,10 +40,10 @@ void sendActParams(){
       Wire.write(tailServoPos);
       Wire.write(";");
       Wire.endTransmission();
-    #endif
+//    #endif
     
-    #ifdef debugTailServo
-      tailServo.write(tailServoPos);
+    #ifdef debugYawServo
+      yawServo.write(yawServoPos);
     #endif
   }
 }

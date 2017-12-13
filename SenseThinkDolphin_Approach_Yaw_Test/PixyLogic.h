@@ -6,11 +6,8 @@ Pixy pixy; // This object handles the pixy cam
 // Pixycam vision variables
 bool canSeeMissionBuoy = false;
 int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
-int CLOSE_BUOY_AREA = 1000; // Change to tune how close robot comes to buoy before turning
+int CLOSE_BUOY_AREA = 3000; // Change to tune how close robot comes to buoy before turning
 bool missionBuoyIsClose = false; // True indicates we have reached the buoy and can switch to new target.
-
-long lastTimePixySampled = 0; // Do not sample the pixy too fast, otherwise will be in oscillating state of see/doesn't see block that hasn't moved much
-int pixySampleTime = 500; // Read pixycam every 500 ms.
 
 // From Arduino API section in http://www.cmucam.org/projects/cmucam5/wiki/Hooking_up_Pixy_to_a_Microcontroller_(like_an_Arduino)
 // Note: Copy and paste link above into browser manually! The click from the IDE does not work.
@@ -39,7 +36,7 @@ bool readPixyCam() {
   int blockCount = pixy.getBlocks(); // Number of blocks detected
   missionBuoyIsClose = false;
   canSeeMissionBuoy = (blockCount > 0);
-//  XBee.println(blockCount);
+  
   int maxIndex = -1; // Define as -1 in case no detected blocks have the correct color
   int maxArea = 0;
   if (canSeeMissionBuoy) { // If there are potential buoys
@@ -59,15 +56,7 @@ bool readPixyCam() {
   if(maxIndex > -1){
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
-//    XBee.println(maxArea);
-//    XBee.println(millis() - approach_start_time);
-//    XBee.println(millis() - approach_start_time >= min_approach_time);
-    if(millis() - approach_start_time >= min_approach_time){
-      // Could potentially be close to a buoy, compare area
-      XBee.println("Check buoy area!");
-      missionBuoyIsClose = (maxArea > CLOSE_BUOY_AREA) ? true : false;
-    }
-    
+    missionBuoyIsClose = (maxArea > CLOSE_BUOY_AREA) ? true : false;
 //    XBee.println("Found buoy at " + String(buoyX) + "," + String(buoyY));
     digitalWrite(13, HIGH);
     if(missionBuoyIsClose){

@@ -12,6 +12,10 @@
 // DEBUGGING VARIABLES
 #define debugDolphinState true
 
+//Artifically update x position of buoy.
+long movePixyTime = 0; // last time we moved the buoy center.
+signed int pixyMoveDir = 50; // are we moving it right (positive) or left (negative)
+
 // check that systems are okay; assign initial state accordingly
 void setup() {
   setupPins();
@@ -30,7 +34,7 @@ void setup() {
     XBee.print("Approach!");
   }
   release_motors(); // Make sure servos are off at the beginning of mission.
-
+  buoyX = 0;
 }
 
 void loop() {
@@ -51,6 +55,15 @@ void loop() {
 
 //  readPixyCam();
 //  updateDolphinState();
+  if(millis() - movePixyTime > 3000){
+    // artificially move pixy left and right
+    pixyMoveDir *= -1;
+    buoyX = X_CENTER + pixyMoveDir * 100;
+    XBee.print("Diff: ");
+    XBee.print(X_CENTER - buoyX);
+    XBee.print(".\n");
+    movePixyTime = millis();
+  }
   sendActParams(); // Ping the ACT Arduino
 }
 
@@ -101,30 +114,5 @@ void incrementMissionTarget(){
   if(current_mission_step >= lengthMission){
     current_mission_step = -1; // Indicate mission is over.
   }
-}
-
-void printDolphinState(){
-  #ifdef debugDolphinState
-    switch(dolphinState){
-      case STANDBY:
-        XBee.println("STANDBY");
-        break;
-      case SEARCH:
-        XBee.println("SEARCH");
-        break;
-      case APPROACH:
-        XBee.println("APPROACH");
-        break;
-      case VICTORY:
-        XBee.println("VICTORY");
-        break;
-      case HELPME:
-        XBee.println("HELPME");
-        break;
-      default:
-        XBee.println("DODO");
-        break;
-    }
-  #endif
 }
 

@@ -2,17 +2,17 @@
 long unsigned lastTailMoveTime = 0; // Keeps track of the last time we calculated tail servo positions. 0 indicates it's never been initialized.
 long unsigned lastUpdateTime = 0; // Keeps track of the last time at which we checked to update act parameters (yaw and tail positions).
 
-int updateDelayTime = 5; // Every couple of ms recalculate tail/yaw positioning. This value has to be low if you want the tail to flap at a very high frequency, because otherwise, it doesn't update fast enough.
+int updateDelayTime = 10; // Every couple of ms recalculate tail/yaw positioning. This value has to be low if you want the tail to flap at a very high frequency, because otherwise, it doesn't update fast enough.
 // Must make sure that the time delay is smaller than the time step of moving the servo at a constant period
-int fastFlapPeriod = 1 * 1000; // 1 full cycle in x milliseconds
+int fastFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
 int slowFlapPeriod = 2 * 1000; // 1 full cycle in x milliseconds
 
 // Servo Positions: ??Need calibration?? Look into making sure that the servoLeft/Right are not negative, since transmitting unsigned bytes.
-int yawServoLeft = 10; // degrees
-int yawServoRight = 150; // degrees
-int tailServoLeft = 0; // degrees
-int tailServoRight = 180; // degrees
-int servoAngleChange = 5; // Smallest value by which to increment servo position
+int yawServoLeft = 30; // degrees
+int yawServoRight = 130; // degrees
+int tailServoLeft = 65; // degrees Calibrated with test_Servo_Pos in Arduino folder.
+int tailServoRight = 135; // degrees
+int servoAngleChange = 2; // Smallest value by which to increment servo position
 int yawServoPos = (yawServoRight + yawServoLeft) / 2; // Initialize to the midpoint.
 int tailServoPos = (tailServoRight + tailServoLeft) / 2; // Initialize to the midpoint.
 int tailDir = 1; // If 1: yaw servo is moving to the right (incrementing). If -1: yaw servo is moving to the left (decrementing)
