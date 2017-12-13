@@ -27,7 +27,8 @@ void setup() {
     printDolphinState();
     XBee.print("Input Mission (r-red, y-yellow, w-white): ");
   }
-  freeze_motors(); // Make sure servos are off at the beginning of mission.
+  //freeze_motors(); // Make sure servos are off at the beginning of mission.
+  release_motors(); // Allow power to the motors.
 
 }
 
@@ -36,8 +37,7 @@ void loop() {
 //    XBee.println("Waiting");
     hasMission = downloadMission();//attempt to download mission here with XBee
     if(hasMission){ // when get one, start searching
-      dolphinState = SEARCH;
-      release_motors(); // Allow power to the motors.
+      dolphinState = SEARCH;  
       current_mission_step = 0;
       XBee.print("\nMission recieved: ");
       XBee.print(mission);
