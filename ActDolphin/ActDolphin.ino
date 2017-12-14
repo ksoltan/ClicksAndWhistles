@@ -17,7 +17,8 @@ enum robotState {
   STANDBY, // No movement
   SEARCH, // Searching movement, rotating about itself
   APPROACH, // Moving towards target
-  VICTORY, // Victory dance on finding target (could also use to go into center of pool to search for next target)
+  VICTORY, // Victory dance on finding target (could also use to 
+           // go into center of pool to search for next target)
   HELPME // E-Stop
 };
 
@@ -28,7 +29,8 @@ void setup() {
   Serial.begin(115200);
   Wire.begin(ACT_ADDRESS);
   // Attach a function to trigger when something is received.
-  Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail position from Sense/Think Arduino
+  Wire.onReceive(receiveEvent); // Receive state, yaw position, and tail 
+                                // position from Sense/Think Arduino
   Serial.begin(115200);
   Serial.println("Hi");
 }
@@ -68,7 +70,8 @@ void loop() {
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
-  if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
+  if (Wire.available() == 6){ // Comma-separated state, yaw position, tail position,
+                              // Total of 6 bytes (there's a trailing comma)
     dolphinState = Wire.read(); // Read the state
     Wire.read(); //Drop a comma
 
@@ -127,8 +130,8 @@ void blinkApproachSignal(){
 }
 
 void blinkVictorySignal(){
-  digitalWrite(yellowLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
-  digitalWrite(blueLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink every 650ms, asymmetrically
+  digitalWrite(yellowLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink 650ms asymmetrically
+  digitalWrite(blueLedPin, millis() % 650 > 500 ? HIGH : LOW); //Blink 650ms asymmetrically
 }
 
 void blinkHelpmeSignal(){

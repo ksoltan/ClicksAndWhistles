@@ -4,7 +4,8 @@
 // Author: Katya
 //#include <Servo.h>
 
-#include "DolphinVariables.h" // Handles dolphin state and mission variables that are used between modules (pixy/mission com/act params)
+#include "DolphinVariables.h" // Handles dolphin state and mission variables that are 
+                              // used between modules (pixy/mission com/act params)
 #include "SensorLogic.h" // Handles sensors and system check functions
 #include "PixyLogic.h" // Handles pixycam and image processing
 #include "ActCommunicationLogic.h" // Handles I2C communication with ACT Arduino
@@ -46,7 +47,8 @@ void loop() {
 
   communicateWithXBee(); // Check if there is a message from the user.
 
-  if(millis() - lastTimePixySampled >= pixySampleTime){ // Not put into readPixyCam code because it is currently written to return whether it sees buoy or not.
+  if(millis() - lastTimePixySampled >= pixySampleTime){ // Not put into readPixyCam code 
+                  //because it is currently written to return whether it sees buoy or not.
       readPixyCam();
       lastTimePixySampled = millis(); // Update time pixy sampled.  
       updateDolphinState();
@@ -69,7 +71,7 @@ void updateDolphinState(){
       dolphinState = APPROACH;
       if(!approaching_timer_set){
         approach_start_time = millis(); // update time of last victory
-        approaching_timer_set = true; // Have set the timer from the first time thinks it's approaching.
+        approaching_timer_set = true; // Have set the timer from the time it's approaching.
         XBee.println("Set timer.");
       }
       printDolphinState();
