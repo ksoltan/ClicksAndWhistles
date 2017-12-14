@@ -1,4 +1,4 @@
-// Drives the "Act" Arduino in 
+// Drives the "Act" Arduino
 
 #include <Wire.h>
 #include <Servo.h>

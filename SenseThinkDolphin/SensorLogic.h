@@ -1,4 +1,7 @@
 //Set up pins and outputs
+//#define tempPin A0
+//#define floodPin 5
+//#define batteryPin A2 //Only the sense/think battery
 #define estop_pin 8
 
 void setupPins(){
