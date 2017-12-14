@@ -1,4 +1,4 @@
-update=Wed 08 Nov 2017 01:12:22 PM EST
+update=Thu 16 Nov 2017 11:27:19 PM EST
 version=1
 last_client=kicad
 [pcbnew]
@@ -63,3 +63,13 @@ LibName31=contrib
 LibName32=valves
 LibName33=freetronics_kicad_library/freetronics_schematic
 LibName34=KiCad-Libraries/symbols/RF_OEM_Parts
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
