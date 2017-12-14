@@ -1,11 +1,4 @@
-/* Sweep
- by BARRAGAN <http://barraganstudio.com>
- This example code is in the public domain.
-
- modified 8 Nov 2013
- by Scott Fitzgerald
- http://www.arduino.cc/en/Tutorial/Sweep
-*/
+// Drives the "Act" Arduino in 
 
 #include <Wire.h>
 #include <Servo.h>
@@ -46,11 +39,8 @@ void setupServos(){
 }
 
 void loop() {
-//  yawServo.write(90);
-//  tailServo.write(90);
   yawServo.write(yawServoPos);
   tailServo.write(tailServoPos);
-//  Serial.println(tailServoPos);
   switch(dolphinState){
     case STANDBY:
       blinkStandbySignal();
@@ -78,14 +68,10 @@ void loop() {
 }
 
 void receiveEvent(int bytes) {  // Receive state, yaw, pitch (tail) from SENSE/THINK Arduino.
-//  Serial.println("In the receive event");
   if (Wire.available() == 6){ // 'state' ',' 'yaw position' ',' 'tail position' , ';' (6 bytes in all)
     dolphinState = Wire.read(); // Read the state
-//    printDolphinState();
-    // Next is a comma.
-    Wire.read();
+    Wire.read(); //Drop a comma
 
-//    yawServoPos = Wire.read(); // Read the way position
     yawServoPos = Wire.read();
     Serial.print("YAW: ");
     Serial.print((int)yawServoPos);

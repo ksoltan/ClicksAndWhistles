@@ -10,36 +10,13 @@
 #include "ActCommunicationLogic.h" // Handles I2C communication with ACT Arduino
 #include "MissionCommunicationLogic.h" // Handles download of mission from XBee
 
-// DEBUGGING VARIABLES
-#define debugDolphinState true
-//#define testYawServo true
-//#define testTailServo true
-
-#ifdef testTailServo
-  Servo tailServo;
-#endif
-
-#ifdef testYawServo
-  Servo yawServo;
-#endif
-
 // check that systems are okay; assign initial state accordingly
 void setup() {
   setupPins();
   setupPixy();
   setupI2C();
   setupMissionCom();
-  
-  #ifdef testTailServo
-    XBee.println("Attaching tail servo");
-    tailServo.attach(6);
-  #endif
 
-  #ifdef testYawServo
-    XBee.println("Attaching yaw servo");
-    yawServo.attach(6);
-  #endif
-  
   if(!areSystemsOK()){
     dolphinState = HELPME;
     printDolphinState();
@@ -76,23 +53,9 @@ void loop() {
 
   }
   sendActParams(); // Ping the ACT Arduino
-  #ifdef testTailServo
-    if(getActParams()){
-//      XBee.println(tailServoPos);
-      tailServo.write(tailServoPos);
-    }
-  #endif
-
-  #ifdef testYawServo
-    if(getActParams()){
-//      XBee.println(yawServoPos);
-      yawServo.write(yawServoPos);
-    }
-  #endif
 }
 
 void updateDolphinState(){
-//  XBee.println("Updating state");
     // THINK: Figures out which state the robot should be in.
   if(!areSystemsOK()){
     dolphinState = HELPME;
@@ -156,27 +119,23 @@ void incrementMissionTarget(){
 }
 
 void printDolphinState(){
-  #ifdef debugDolphinState
-    switch(dolphinState){
-      case STANDBY:
-        XBee.println("STANDBY");
-        break;
-      case SEARCH:
-        XBee.println("SEARCH");
-        break;
-      case APPROACH:
-        XBee.println("APPROACH");
-        break;
-      case VICTORY:
-        XBee.println("VICTORY");
-        break;
-      case HELPME:
-        XBee.println("HELPME");
-        break;
-      default:
-        XBee.println("DODO");
-        break;
-    }
-  #endif
+  switch(dolphinState){
+    case STANDBY:
+      XBee.println("STANDBY");
+      break;
+    case SEARCH:
+      XBee.println("SEARCH");
+      break;
+    case APPROACH:
+      XBee.println("APPROACH");
+      break;
+    case VICTORY:
+      XBee.println("VICTORY");
+      break;
+    case HELPME:
+    default:
+      XBee.println("HELPME");
+      break;
+  }
 }
 
