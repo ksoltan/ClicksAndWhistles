@@ -1,7 +1,4 @@
 //Set up pins and outputs
-//#define tempPin A0
-//#define floodPin 5
-//#define batteryPin A2 // ??Shouldn't there be two battery pins??
 #define estop_pin 8
 
 void setupPins(){
@@ -22,7 +19,7 @@ void setupPins(){
   #endif
 }
 
-// Press the E-stop in code. Writing 0 to the relay will stop passing current through it to the servos (make it open).
+// Writing 0 to the relay will open it, triggering the e-stop.
 void freeze_motors(){
   digitalWrite(estop_pin, LOW);
 }
@@ -33,7 +30,7 @@ void release_motors(){
 }
 
 bool isEStopOK(){
-  return true; // NO ESTOP DEFINED YET MUST CHANGE
+  return digitalRead(estop_pin) == HIGH;
 }
 
 /*
@@ -57,7 +54,8 @@ bool isBatteryVoltageOK() {
     voltage = voltage / 10; //divide by number of samples
   
     float min_acceptable_voltage = 3.8;
-    int min_acceptable_reading = (int) (min_acceptable_voltage * 1024 / 5);  // 5 volts = 1024. We want more than 3.8 from voltage divider
+    int min_acceptable_reading = (int) (min_acceptable_voltage * 1024 / 5);
+      // 5 volts = 1024. We want more than 3.8 from voltage divider
     
     return voltage > min_acceptable_reading;
   #else

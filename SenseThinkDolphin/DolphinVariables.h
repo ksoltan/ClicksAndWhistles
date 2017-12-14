@@ -8,7 +8,8 @@ enum robotState {
   STANDBY, // Waiting for GO signal
   SEARCH, // Searching for next target
   APPROACH, // Approaching target
-  VICTORY, // Victory dance on finding target (could also use to go into center of pool to search for next target)
+  VICTORY, // Victory dance on finding target (could also use to go into center of
+           // pool to search for next target)
   HELPME // Sensors picked up problem in robot, such as flooding, overheating, or e-stop
 };
 
@@ -19,13 +20,14 @@ enum robotState dolphinState;
 
 // Mission definition variables
 bool hasMission = false; // The mission comes from the computer
-String mission = ""; //r for red, y for yellow, w for white, e for end (or just look at the length)
+String mission = ""; //r for red, y for yellow, w for white, e for end
 int lengthMission = 0;
-int current_mission_step = 0; // 0 is the first step of the mission, increment by one until get to the end of the mission
+int current_mission_step = 0; // 0 is the first step of the mission, increment until the end
 
 boolean approaching_timer_set = false;
 long approach_start_time = 0;
-long min_approach_time = 10 * 1000L; // Give robot 15s to move before considering if the area of the buoy is large enough due to different brightnesses of LEDs
+long min_approach_time = 10 * 1000L; // Give robot 15s to move before considering if the 
+                   // area of the buoy is large enough, due to different brightnesses of LEDs
 
 void resetMission(){
   hasMission = false;

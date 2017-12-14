@@ -3,7 +3,6 @@ void setupMissionCom(){
 }
 
 bool downloadMission() {
-//  hasMission = false;
   if (XBee.available()){ // Serial port available for communication
     mission = XBee.readStringUntil('\n'); // Read until a newline
     lengthMission = mission.length();
@@ -36,7 +35,9 @@ void communicateWithXBee(){
     String command = XBee.readStringUntil('\n'); // Read until a newline
     int lengthCommand = command.length();
     
-    if (lengthCommand == 4 && command[0] == 't') { // User command to turn robot manually and progress to next step.
+    if (lengthCommand == 4 && command[0] == 't') { 
+      // User command to turn robot manually and progress to next step.
+
       XBee.println("Turning, and updating to next mission step.");
       dolphinState = VICTORY;
     }

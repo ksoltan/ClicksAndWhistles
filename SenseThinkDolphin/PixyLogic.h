@@ -1,19 +1,21 @@
-#include <SPI.h> // Serial Peripheral Interface: the way our PixyCam communicates with the board
+#include <SPI.h> // Serial Peripheral Interface: the way we communicate with the our PixyCam
 #include <Pixy.h>
 
 Pixy pixy; // This object handles the pixy cam
 
 // Pixycam vision variables
 bool canSeeMissionBuoy = false;
-int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199. -1 indicates we don't know.
+int buoyX = -1, buoyY = -1; // Position of the buoy: X is 0 to 319, Y is 0 to 199.
+                            //-1 indicates we don't know.
 int CLOSE_BUOY_AREA = 1000; // Change to tune how close robot comes to buoy before turning
-bool missionBuoyIsClose = false; // True indicates we have reached the buoy and can switch to new target.
+bool missionBuoyIsClose = false; // True indicates we have reached the buoy and can switch to 
+                                 // a new target.
 
-long lastTimePixySampled = 0; // Do not sample the pixy too fast, otherwise will be in oscillating state of see/doesn't see block that hasn't moved much
+long lastTimePixySampled = 0; // Do not sample the pixy too fast, to avoid switching states
 int pixySampleTime = 500; // Read pixycam every 500 ms.
 
-// From Arduino API section in http://www.cmucam.org/projects/cmucam5/wiki/Hooking_up_Pixy_to_a_Microcontroller_(like_an_Arduino)
-// Note: Copy and paste link above into browser manually! The click from the IDE does not work.
+// From Arduino API section in http://www.cmucam.org/projects/cmucam5/
+// wiki/Hooking_up_Pixy_to_a_Microcontroller_(like_an_Arduino)
 #define X_MAX 319 // maximum horizontal position on pixycam. Min is 0.
 #define X_CENTER X_MAX / 2 // horizontal center of the pixycam
 #define Y_MAX 199 // maximum vertical position on pixycam. Min is 0.
@@ -55,7 +57,7 @@ bool readPixyCam() {
       }
     }
   }
-  // If we have detected a buoy of the correct color, decide whether we are close enough to the buoy as victory
+  // If we have detected a buoy, decide whether we are close enough to the buoy as victory
   if(maxIndex > -1){
     buoyX = pixy.blocks[maxIndex].x;
     buoyY = pixy.blocks[maxIndex].y;
